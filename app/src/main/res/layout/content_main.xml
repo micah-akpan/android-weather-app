@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+    <ImageView
+        android:id="@+id/ivWeatherImage"
+        android:layout_width="101dp"
+        android:layout_height="91dp"
+        android:layout_marginTop="32dp"
+        android:layout_marginEnd="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:srcCompat="@tools:sample/avatars" />
+
+    <TextView
+        android:id="@+id/tvWeatherText"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="TextView"
+        app:layout_constraintEnd_toEndOf="@+id/ivWeatherImage"
+        app:layout_constraintStart_toStartOf="@+id/ivWeatherImage"
+        app:layout_constraintTop_toBottomOf="@+id/ivWeatherImage" />
+
+    <TextView
+        android:id="@+id/tvDateTime"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:text="TextView"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/tvDayTemp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="TextView"
+        app:layout_constraintEnd_toEndOf="@+id/tvDateTime"
+        app:layout_constraintTop_toBottomOf="@+id/tvDateTime" />
+
+    <TextView
+        android:id="@+id/tvNightTemp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:text="TextView"
+        app:layout_constraintStart_toEndOf="@+id/tvDayTemp"
+        app:layout_constraintTop_toTopOf="@+id/tvDayTemp" />
+
+    <TextView
+        android:id="@+id/tvMainTemp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="TextView"
+        android:textSize="24sp"
+        app:layout_constraintStart_toStartOf="@+id/tvDayTemp"
+        app:layout_constraintTop_toBottomOf="@+id/tvDayTemp" />
+
+    <TextView
+        android:id="@+id/tvUnitTemp"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:text="TextView"
+        app:layout_constraintStart_toEndOf="@+id/tvMainTemp"
+        app:layout_constraintTop_toTopOf="@+id/tvMainTemp" />
+
+    <TextView
+        android:id="@+id/tvPerceivedTemp"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="TextView"
+        app:layout_constraintEnd_toEndOf="@+id/tvMainTemp"
+        app:layout_constraintStart_toStartOf="@+id/tvMainTemp"
+        app:layout_constraintTop_toBottomOf="@+id/tvMainTemp" />
+</androidx.constraintlayout.widget.ConstraintLayout>
