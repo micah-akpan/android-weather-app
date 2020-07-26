@@ -75,7 +75,7 @@ public class Weather {
 
     static String getWeatherTime(double dateTime) {
         Date d = new Date((long) dateTime);
-        SimpleDateFormat sf = new SimpleDateFormat("MMM DD");
+        SimpleDateFormat sf = new SimpleDateFormat("MMM DD, h:mm a");
         String newDateForm = sf.format(d);
         return newDateForm;
     }

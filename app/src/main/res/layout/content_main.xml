@@ -12,7 +12,7 @@
         android:id="@+id/ivWeatherImage"
         android:layout_width="101dp"
         android:layout_height="91dp"
-        android:layout_marginTop="32dp"
+        android:layout_marginTop="64dp"
         android:layout_marginEnd="16dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
@@ -25,7 +25,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="4dp"
         android:inputType="textCapSentences"
-        android:text="TextView"
+        android:text="Cloudy"
         android:textColor="#FFFFFF"
         app:layout_constraintEnd_toEndOf="@+id/ivWeatherImage"
         app:layout_constraintStart_toStartOf="@+id/ivWeatherImage"
@@ -33,11 +33,11 @@
 
     <TextView
         android:id="@+id/tvDateTime"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:layout_marginTop="16dp"
-        android:text="TextView"
+        android:text="Jan 01, 2020"
         android:textColor="#FFFFFF"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -47,18 +47,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:text="TextView"
+        android:text="0"
         android:textColor="#FFFFFF"
-        app:layout_constraintEnd_toEndOf="@+id/tvDateTime"
         app:layout_constraintStart_toStartOf="@+id/tvDateTime"
         app:layout_constraintTop_toBottomOf="@+id/tvDateTime" />
 
     <TextView
         android:id="@+id/tvNightTemp"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:text="TextView"
+        android:text="0"
         android:textColor="#FFFFFF"
         app:layout_constraintStart_toEndOf="@+id/tvDayTemp"
         app:layout_constraintTop_toTopOf="@+id/tvDayTemp" />
@@ -69,18 +68,19 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:fontFamily="@font/baloo_bhai"
-        android:text="TextView"
+        android:text="30"
         android:textColor="#FFFFFF"
-        android:textSize="60sp"
-        app:layout_constraintStart_toStartOf="@+id/tvDayTemp"
+        android:textSize="64sp"
+        app:layout_constraintStart_toStartOf="@+id/tvDateTime"
         app:layout_constraintTop_toBottomOf="@+id/tvDayTemp" />
 
     <TextView
         android:id="@+id/tvUnitTemp"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="4dp"
-        android:text="TextView"
+        android:layout_marginStart="8dp"
+        android:layout_marginTop="16dp"
+        android:text="C"
         android:textColor="#FFFFFF"
         android:textSize="18sp"
         app:layout_constraintStart_toEndOf="@+id/tvMainTemp"
@@ -91,10 +91,24 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:fontFamily="@font/baloo_bhai"
-        android:text="TextView"
+        android:text="Feels like 30"
         android:textColor="#FFFFFF"
         android:textSize="14sp"
         android:textStyle="bold"
         app:layout_constraintStart_toStartOf="@+id/tvMainTemp"
         app:layout_constraintTop_toBottomOf="@+id/tvMainTemp" />
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/temp_degree_symbol"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toStartOf="@+id/tvUnitTemp"
+        app:layout_constraintStart_toEndOf="@+id/tvMainTemp"
+        app:layout_constraintTop_toTopOf="@+id/tvMainTemp" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
