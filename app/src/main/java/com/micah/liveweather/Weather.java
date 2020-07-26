@@ -1,6 +1,7 @@
 package com.micah.liveweather;
 
-import java.time.LocalDateTime;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class Weather {
     public final String description;
@@ -19,7 +20,7 @@ public class Weather {
         this.description = description;
         this.icon = icon;
         // data comes in "K" by default
-        this.temp = convertToCelsius('K');
+        this.temp = temp;
         this.minTemp = minTemp;
         this.maxTemp = maxTemp;
         this.feelsLikeTemp = feelsLikeTemp;
@@ -38,7 +39,7 @@ public class Weather {
         double celsiusTemp = 0;
         switch(unit) {
             case 'K':
-                celsiusTemp = 273.15 - temp;
+                celsiusTemp = temp - 273.15;
                 break;
             case 'F':
                 celsiusTemp = (temp - 32) / (5 / 9);
@@ -50,5 +51,32 @@ public class Weather {
         }
 
         return celsiusTemp;
+    }
+
+
+    double convertToCelsius(double temp, char unit, boolean round) {
+        double celsiusTemp = 0;
+        switch(unit) {
+            case 'K':
+                celsiusTemp = temp - 273.15;
+                break;
+            case 'F':
+                celsiusTemp = (temp - 32) / (5 / 9);
+                break;
+
+            default:
+                celsiusTemp = temp;
+                break;
+        }
+
+        if (round) celsiusTemp = Math.round(celsiusTemp);
+        return celsiusTemp;
+    }
+
+    static String getWeatherTime(double dateTime) {
+        Date d = new Date((long) dateTime);
+        SimpleDateFormat sf = new SimpleDateFormat("MMM DD");
+        String newDateForm = sf.format(d);
+        return newDateForm;
     }
 }

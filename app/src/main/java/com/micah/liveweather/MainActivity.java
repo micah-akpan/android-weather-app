@@ -4,9 +4,11 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
 
+import com.bumptech.glide.Glide;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.snackbar.Snackbar;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 
@@ -15,6 +17,7 @@ import android.view.View;
 
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import org.json.JSONArray;
@@ -34,6 +37,8 @@ public class MainActivity extends AppCompatActivity {
     private static final String API_QUERY_PARAMETER_KEY = "appid";
     private static final String API_KEY = "f4b7c212a14a8efd5a0f08e9cf50a192";
     private static final String API_LOCATION_TEXT = "q";
+    public static final String OPENWEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
+    public MainActivity context = this;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,17 +46,6 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
-        FloatingActionButton fab = findViewById(R.id.fab);
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                        .setAction("Action", null).show();
-            }
-        });
-
-//        URL url = buildURL(234826);
 
         displayContent();
     }
@@ -70,8 +64,8 @@ public class MainActivity extends AppCompatActivity {
 //        String DAY_WEATHER_API_URL = BASE_API_URL + location;
         URL url = null;
         Uri uri = Uri.parse(BASE_API_URL).buildUpon()
-                .appendQueryParameter(API_QUERY_PARAMETER_KEY, API_KEY)
                 .appendQueryParameter(API_LOCATION_TEXT, String.valueOf(location))
+                .appendQueryParameter(API_QUERY_PARAMETER_KEY, API_KEY)
                 .build();
 
         try {
@@ -82,14 +76,14 @@ public class MainActivity extends AppCompatActivity {
         return url;
     }
 
-    protected String getWeatherData(URL url) {
+    protected String getWeatherData(@NonNull URL url) {
         HttpURLConnection connection = null;
 
         try {
             connection = (HttpURLConnection) url.openConnection();
-//            connection.setRequestMethod("GET");
-//            connection.setReadTimeout(5000);
-//            connection.setConnectTimeout(5000);
+            connection.setRequestMethod("GET");
+            connection.setReadTimeout(5000);
+            connection.setConnectTimeout(5000);
 
             int responseCode = connection.getResponseCode();
             InputStream stream = connection.getInputStream();
@@ -105,7 +99,7 @@ public class MainActivity extends AppCompatActivity {
             connection.disconnect();
         }
 
-        return null;
+        return "";
     }
 
     public Weather parseWeatherData(String json) {
@@ -193,14 +187,23 @@ public class MainActivity extends AppCompatActivity {
             TextView tvWeatherDescription = findViewById(R.id.tvWeatherText);
             TextView tvFeelsLikeTemp = findViewById(R.id.tvPerceivedTemp);
             TextView tvUnitTemp = findViewById(R.id.tvUnitTemp);
+            TextView tvDateTemp = findViewById(R.id.tvDateTime);
+            ImageView ivWeatherImage = findViewById(R.id.ivWeatherImage);
 
             Weather todayWeather = parseWeatherData(result);
-            tvMainTemp.setText(String.valueOf(todayWeather.temp));
-            tvMinTemp.setText(String.valueOf(todayWeather.minTemp));
-            tvMaxTemp.setText(String.valueOf(todayWeather.maxTemp));
-            tvWeatherDescription.setText(todayWeather.description);
-            tvFeelsLikeTemp.setText(String.valueOf(todayWeather.feelsLikeTemp));
-            tvUnitTemp.setText(String.valueOf(tvUnitTemp));
+            tvMainTemp.setText(String.valueOf(todayWeather.convertToCelsius('K')));
+            tvMinTemp.setText(String.valueOf(todayWeather.convertToCelsius(todayWeather.minTemp, 'K', false)));
+            tvMaxTemp.setText(String.valueOf(todayWeather.convertToCelsius(todayWeather.maxTemp, 'K', false)));
+            tvWeatherDescription.setText(todayWeather.description.substring(0, 1).toUpperCase() +
+                    todayWeather.description.substring(1).toLowerCase());
+            tvFeelsLikeTemp.setText("Feels like " + String.valueOf(todayWeather.convertToCelsius(todayWeather.feelsLikeTemp, 'K', true)));
+            tvUnitTemp.setText(String.valueOf(todayWeather.getCurrentUnit()));
+
+            String imageUrl = OPENWEATHERMAP_BASE_IMAGE_URL + todayWeather.icon + "@2x.png";
+
+            Glide.with(context).load(imageUrl).into(ivWeatherImage);
+
+            tvDateTemp.setText(Weather.getWeatherTime(todayWeather.currentTime));
 
             super.onPostExecute(result);
         }
