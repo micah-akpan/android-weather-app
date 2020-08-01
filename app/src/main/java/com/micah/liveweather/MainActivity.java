@@ -1,39 +1,21 @@
 package com.micah.liveweather;
 
-import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-
-import com.bumptech.glide.Glide;
-
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
-
 import android.util.Log;
-
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
+import com.bumptech.glide.Glide;
+
 import java.net.URL;
-import java.util.Scanner;
 
 public class MainActivity extends AppCompatActivity {
-
-    private static final String BASE_API_URL = "http://api.openweathermap.org/data/2.5/weather";
-    private static final String API_QUERY_PARAMETER_KEY = "appid";
-    private static final String API_KEY = "f4b7c212a14a8efd5a0f08e9cf50a192";
-    private static final String API_LOCATION_TEXT = "q";
     public static final String OPENWEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
     public MainActivity context = this;
 
@@ -50,87 +32,11 @@ public class MainActivity extends AppCompatActivity {
 
     private void displayContent() {
         try {
-            URL url = buildURL("Lagos");
+            URL url = WeatherHelper.buildURL("Lagos");
             new WeatherQueryTask().execute(url);
         } catch (Exception e) {
             Log.e("Error: ", e.toString());
         }
-    }
-
-    protected URL buildURL(String location) {
-//        String DAY_WEATHER_API_URL = BASE_API_URL + location;
-        URL url = null;
-        Uri uri = Uri.parse(BASE_API_URL).buildUpon()
-                .appendQueryParameter(API_LOCATION_TEXT, String.valueOf(location))
-                .appendQueryParameter(API_QUERY_PARAMETER_KEY, API_KEY)
-                .build();
-
-        try {
-            url = new URL(uri.toString());
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-        return url;
-    }
-
-    protected String getWeatherData(@NonNull URL url) {
-        HttpURLConnection connection = null;
-
-        try {
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setReadTimeout(5000);
-            connection.setConnectTimeout(5000);
-
-            int responseCode = connection.getResponseCode();
-            InputStream stream = connection.getInputStream();
-
-            Scanner scanner = new Scanner(stream);
-            scanner.useDelimiter("\\A");
-
-            boolean hasData = scanner.hasNext();
-            return hasData ? scanner.next() : null;
-        } catch (IOException e) {
-            Log.e("WEATHER_APP", e.toString());
-        } finally {
-            connection.disconnect();
-        }
-
-        return "";
-    }
-
-    public Weather parseWeatherData(String json) {
-        Weather weather = null;
-
-        final String WEATHER_TITLE = "weather";
-        final String WEATHER_DESCRIPTION = "description";
-        final String WEATHER_ICON = "icon";
-        final String TEMP = "temp";
-        final String MIN_TEMP = "temp_min";
-        final String MAX_TEMP = "temp_max";
-        final String FEELS_TEMP = "feels_like";
-        final String WEATHER_TIME = "dt";
-
-        try {
-            JSONObject jsonWeather = new JSONObject(json);
-            JSONArray jsonWeatherObjArray = jsonWeather.getJSONArray(WEATHER_TITLE);
-            JSONObject jsonWeatherObj = jsonWeatherObjArray.getJSONObject(0);
-            String description = jsonWeatherObj.getString(WEATHER_DESCRIPTION);
-            String icon = jsonWeatherObj.getString(WEATHER_ICON);
-            JSONObject jsonWeatherMain = jsonWeather.getJSONObject("main");
-
-            double temp = Double.valueOf(jsonWeatherMain.getString(TEMP));
-            double feelsLikeTemp = Double.valueOf(jsonWeatherMain.getString(FEELS_TEMP));
-            double maxTemp = Double.valueOf(jsonWeatherMain.getString(MAX_TEMP));
-            double minTemp = Double.valueOf(jsonWeatherMain.getString(MIN_TEMP));
-            double weatherTime = Double.valueOf(jsonWeather.getString(WEATHER_TIME));
-
-            weather = new Weather(description, temp, minTemp, maxTemp, feelsLikeTemp, weatherTime, icon);
-
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-        return weather;
     }
 
     @Override
@@ -169,9 +75,9 @@ public class MainActivity extends AppCompatActivity {
             String result = "";
 
             try {
-                result = getWeatherData(url);
+                result = WeatherHelper.getWeatherData(url);
             } catch (Exception e) {
-                Log.e("ERROR: ", e.getMessage());
+               e.printStackTrace();
             }
             return result;
         }
@@ -187,7 +93,7 @@ public class MainActivity extends AppCompatActivity {
             TextView tvDateTemp = findViewById(R.id.tvDateTime);
             ImageView ivWeatherImage = findViewById(R.id.ivWeatherImage);
 
-            Weather todayWeather = parseWeatherData(result);
+            Weather todayWeather = WeatherHelper.parseWeatherData(result);
             tvMainTemp.setText(String.valueOf(todayWeather.convertToCelsius('K')));
             tvMinTemp.setText(String.valueOf(todayWeather.convertToCelsius(todayWeather.minTemp, 'K', false)));
             tvMaxTemp.setText(String.valueOf(todayWeather.convertToCelsius(todayWeather.maxTemp, 'K', false)));
