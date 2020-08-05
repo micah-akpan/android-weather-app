@@ -17,7 +17,6 @@ import java.net.URL;
 
 public class MainActivity extends AppCompatActivity {
     public static final String OPENWEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
-    public MainActivity context = this;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -94,19 +93,23 @@ public class MainActivity extends AppCompatActivity {
             ImageView ivWeatherImage = findViewById(R.id.ivWeatherImage);
 
             Weather todayWeather = WeatherHelper.parseWeatherData(result);
-            tvMainTemp.setText(String.valueOf(todayWeather.convertToCelsius('K')));
-            tvMinTemp.setText(String.valueOf(todayWeather.convertToCelsius(todayWeather.minTemp, 'K', false)));
-            tvMaxTemp.setText(String.valueOf(todayWeather.convertToCelsius(todayWeather.maxTemp, 'K', false)));
-            tvWeatherDescription.setText(todayWeather.description.substring(0, 1).toUpperCase() +
-                    todayWeather.description.substring(1).toLowerCase());
-            tvFeelsLikeTemp.setText("Feels like " + String.valueOf(todayWeather.convertToCelsius(todayWeather.feelsLikeTemp, 'K', true)));
-            tvUnitTemp.setText(String.valueOf(todayWeather.getCurrentUnit()));
 
+            int mainTemp = (int) todayWeather.convertToCelsius('K');
+            int minTemp = (int) todayWeather.convertToCelsius(todayWeather.minTemp, 'K');
+            int maxTemp = (int) todayWeather.convertToCelsius(todayWeather.maxTemp, 'K');
+            int feelsLikeTemp = (int) todayWeather.convertToCelsius(todayWeather.feelsLikeTemp, 'K');
             String imageUrl = OPENWEATHERMAP_BASE_IMAGE_URL + todayWeather.icon + "@2x.png";
 
-            Glide.with(context).load(imageUrl).into(ivWeatherImage);
 
-            tvDateTemp.setText(Weather.getWeatherTime(todayWeather.currentTime));
+            tvMainTemp.setText(String.valueOf(mainTemp));
+            tvMinTemp.setText(String.valueOf(minTemp));
+            tvMaxTemp.setText(String.valueOf(maxTemp));
+            tvWeatherDescription.setText(todayWeather.capitalizeDescription());
+            tvFeelsLikeTemp.setText("Feels like " + String.valueOf(feelsLikeTemp));
+            tvUnitTemp.setText(String.valueOf(todayWeather.getCurrentUnit()));
+
+            todayWeather.setWeatherImage(getApplicationContext(), imageUrl, ivWeatherImage);
+            tvDateTemp.setText(Weather.getWeatherTime());
 
             super.onPostExecute(result);
         }

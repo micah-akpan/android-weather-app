@@ -1,6 +1,13 @@
 package com.micah.liveweather;
 
+import android.content.Context;
+import android.util.Log;
+import android.widget.ImageView;
+
+import com.bumptech.glide.Glide;
+
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 
 public class Weather {
@@ -19,11 +26,11 @@ public class Weather {
                    double feelsLikeTemp, double currentTime, String icon) {
         this.description = description;
         this.icon = icon;
-        // data comes in "K" by default
-        this.temp = temp;
-        this.minTemp = minTemp;
-        this.maxTemp = maxTemp;
-        this.feelsLikeTemp = feelsLikeTemp;
+        // data comes measured in "K" by default
+        this.temp = MathHelper.round(temp);
+        this.minTemp = MathHelper.round(minTemp);
+        this.maxTemp = MathHelper.round(maxTemp);
+        this.feelsLikeTemp = MathHelper.round(feelsLikeTemp);
         this.currentTime = currentTime;
     }
 
@@ -54,7 +61,7 @@ public class Weather {
     }
 
 
-    double convertToCelsius(double temp, char unit, boolean round) {
+    double convertToCelsius(double temp, char unit) {
         double celsiusTemp = 0;
         switch(unit) {
             case 'K':
@@ -69,14 +76,22 @@ public class Weather {
                 break;
         }
 
-        if (round) celsiusTemp = Math.round(celsiusTemp);
         return celsiusTemp;
     }
 
-    static String getWeatherTime(double dateTime) {
-        Date d = new Date((long) dateTime);
-        SimpleDateFormat sf = new SimpleDateFormat("MMM DD, h:mm a");
-        String newDateForm = sf.format(d);
+    String capitalizeDescription() {
+        return this.description.substring(0, 1).toUpperCase() +
+                this.description.substring(1).toLowerCase();
+    }
+
+    void setWeatherImage(Context context, String imageUrl, ImageView imageView) {
+        Glide.with(context).load(imageUrl).into(imageView);
+    }
+
+    static String getWeatherTime() {
+        final long now = Calendar.getInstance().getTimeInMillis();
+        SimpleDateFormat sf = new SimpleDateFormat("MMM dd, h:mm a");
+        String newDateForm = sf.format(new Date(now));
         return newDateForm;
     }
 }

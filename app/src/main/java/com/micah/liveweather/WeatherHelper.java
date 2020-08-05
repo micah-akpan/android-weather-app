@@ -89,7 +89,7 @@ public class WeatherHelper {
             double feelsLikeTemp = Double.valueOf(jsonWeatherMain.getString(FEELS_TEMP));
             double maxTemp = Double.valueOf(jsonWeatherMain.getString(MAX_TEMP));
             double minTemp = Double.valueOf(jsonWeatherMain.getString(MIN_TEMP));
-            double weatherTime = Double.valueOf(jsonWeather.getString(WEATHER_TIME));
+            double weatherTime = Double.parseDouble(jsonWeather.getString(WEATHER_TIME));
 
             weather = new Weather(description, temp, minTemp, maxTemp, feelsLikeTemp, weatherTime, icon);
 
