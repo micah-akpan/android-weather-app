@@ -16,7 +16,6 @@ public class Weather {
     public final double minTemp;
     public final double maxTemp;
     public final double feelsLikeTemp;
-//    public final LocalDateTime currentTime;
     public final double currentTime;
     public final String icon;
     private char currentUnit = 'C';
@@ -42,7 +41,7 @@ public class Weather {
         return currentUnit;
     }
 
-    double convertToCelsius(char unit) {
+    public double convertToCelsius(char unit) {
         double celsiusTemp = 0;
         switch(unit) {
             case 'K':
@@ -61,7 +60,7 @@ public class Weather {
     }
 
 
-    double convertToCelsius(double temp, char unit) {
+    public double convertToCelsius(double temp, char unit) {
         double celsiusTemp = 0;
         switch(unit) {
             case 'K':
@@ -79,16 +78,16 @@ public class Weather {
         return celsiusTemp;
     }
 
-    String capitalizeDescription() {
+    public String capitalizeDescription() {
         return this.description.substring(0, 1).toUpperCase() +
                 this.description.substring(1).toLowerCase();
     }
 
-    void setWeatherImage(Context context, String imageUrl, ImageView imageView) {
+    public void setWeatherImage(Context context, String imageUrl, ImageView imageView) {
         Glide.with(context).load(imageUrl).into(imageView);
     }
 
-    static String getWeatherTime() {
+    public static String getWeatherTime() {
         final long now = Calendar.getInstance().getTimeInMillis();
         SimpleDateFormat sf = new SimpleDateFormat("MMM d, h:mm a");
         String newDateForm = sf.format(new Date(now));
