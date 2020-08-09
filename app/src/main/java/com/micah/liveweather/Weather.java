@@ -90,7 +90,7 @@ public class Weather {
 
     static String getWeatherTime() {
         final long now = Calendar.getInstance().getTimeInMillis();
-        SimpleDateFormat sf = new SimpleDateFormat("MMM dd, h:mm a");
+        SimpleDateFormat sf = new SimpleDateFormat("MMM d, h:mm a");
         String newDateForm = sf.format(new Date(now));
         return newDateForm;
     }
