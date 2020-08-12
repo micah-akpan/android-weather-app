@@ -81,10 +81,10 @@ public class Weather {
     public static double convertTemp(final double temp, final char to) {
         if (to == 'F') {
             setCurrentUnit('F');
-            return (temp + 32 * 9) / 5;
+            return (temp * 9 / 5) + 32;
         } else {
             setCurrentUnit('C');
-            return (temp - 32) * (5 / 9);
+            return (temp - 32) * 5 / 9;
         }
     }
 

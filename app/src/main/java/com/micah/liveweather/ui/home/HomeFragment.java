@@ -19,7 +19,7 @@ import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
-import com.micah.liveweather.MainActivity;
+import com.micah.liveweather.MathHelper;
 import com.micah.liveweather.R;
 import com.micah.liveweather.Weather;
 import com.micah.liveweather.WeatherHelper;
@@ -33,6 +33,9 @@ public class HomeFragment extends Fragment {
     public static final String OPENWEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
     private FragmentActivity mFragmentActivity;
     TextView mTvMainTemp;
+
+    double mWeatherTemp = 0;
+    private TextView mTvUnitTemp;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -49,6 +52,7 @@ public class HomeFragment extends Fragment {
 //        });
 
         mTvMainTemp = root.findViewById(R.id.tvMainTemp);
+        mTvUnitTemp = root.findViewById(R.id.tvUnitTemp);
 
         mFragmentActivity = getActivity();
 
@@ -77,15 +81,21 @@ public class HomeFragment extends Fragment {
 
     private void convertTempToCelsius() {
         if (Weather.currentUnit == 'F') {
-            double numCurrentTemp = Double.valueOf((String) mTvMainTemp.getText());
-            mTvMainTemp.setText(String.valueOf(Weather.convertTemp(numCurrentTemp, 'C')));
+            double newTemp = MathHelper.round(Weather.convertTemp(mWeatherTemp, 'C'));
+            mWeatherTemp = newTemp;
+            mTvMainTemp.setText(String.valueOf(Math.round(mWeatherTemp)));
+            Weather.setCurrentUnit('C');
+            mTvUnitTemp.setText(String.valueOf(Weather.currentUnit));
         }
     }
 
     private void convertTempToFahr() {
         if (Weather.currentUnit == 'C') {
-            double numCurrentTemp = Double.valueOf((String) mTvMainTemp.getText());
-            mTvMainTemp.setText(String.valueOf(Weather.convertTemp(numCurrentTemp, 'F')));
+            double newTemp = MathHelper.round(Weather.convertTemp(mWeatherTemp, 'F'), 0);
+            mWeatherTemp = newTemp;
+            mTvMainTemp.setText(String.valueOf(Math.round(mWeatherTemp)));
+            Weather.setCurrentUnit('F');
+            mTvUnitTemp.setText(String.valueOf(Weather.currentUnit));
         }
     }
 
@@ -154,6 +164,8 @@ public class HomeFragment extends Fragment {
 
             todayWeather.setWeatherImage(mContext.getApplicationContext(), imageUrl, ivWeatherImage);
             tvDateTemp.setText(Weather.getWeatherTime());
+
+            mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
 
             super.onPostExecute(result);
         }
