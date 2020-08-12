@@ -7,12 +7,15 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
@@ -28,6 +31,8 @@ public class HomeFragment extends Fragment {
     private HomeViewModel homeViewModel;
     private Context mContext;
     public static final String OPENWEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
+    private FragmentActivity mFragmentActivity;
+    TextView mTvMainTemp;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -42,9 +47,48 @@ public class HomeFragment extends Fragment {
 //                textView.setText(s);
 //            }
 //        });
+
+        mTvMainTemp = root.findViewById(R.id.tvMainTemp);
+
+        mFragmentActivity = getActivity();
+
+        Button celsiusDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerCelsius);
+        Button fahrDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerFahr);
+        final DrawerLayout drawerLayout = mFragmentActivity.findViewById(R.id.drawer_layout);
+        celsiusDrawerBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                convertTempToCelsius();
+                drawerLayout.closeDrawers();
+            }
+        });
+
+        fahrDrawerBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                convertTempToFahr();
+                drawerLayout.closeDrawers();
+            }
+        });
+
         displayContent();
         return root;
     }
+
+    private void convertTempToCelsius() {
+        if (Weather.currentUnit == 'F') {
+            double numCurrentTemp = Double.valueOf((String) mTvMainTemp.getText());
+            mTvMainTemp.setText(String.valueOf(Weather.convertTemp(numCurrentTemp, 'C')));
+        }
+    }
+
+    private void convertTempToFahr() {
+        if (Weather.currentUnit == 'C') {
+            double numCurrentTemp = Double.valueOf((String) mTvMainTemp.getText());
+            mTvMainTemp.setText(String.valueOf(Weather.convertTemp(numCurrentTemp, 'F')));
+        }
+    }
+
 
     private void displayContent() {
         try {
@@ -54,6 +98,9 @@ public class HomeFragment extends Fragment {
             Log.e("Error: ", e.toString());
         }
     }
+
+    @Override
+    public void onViewCreated(View view, Bundle savedInstanceState) { }
 
     public class WeatherQueryTask extends AsyncTask<URL, Void, String> {
 
@@ -103,7 +150,7 @@ public class HomeFragment extends Fragment {
             tvMaxTemp.setText(String.valueOf(maxTemp));
             tvWeatherDescription.setText(todayWeather.capitalizeDescription());
             tvFeelsLikeTemp.setText("Feels like " + String.valueOf(feelsLikeTemp));
-            tvUnitTemp.setText(String.valueOf(todayWeather.getCurrentUnit()));
+            tvUnitTemp.setText(String.valueOf(Weather.currentUnit));
 
             todayWeather.setWeatherImage(mContext.getApplicationContext(), imageUrl, ivWeatherImage);
             tvDateTemp.setText(Weather.getWeatherTime());

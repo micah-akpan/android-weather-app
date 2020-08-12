@@ -18,7 +18,9 @@ public class Weather {
     public final double feelsLikeTemp;
     public final double currentTime;
     public final String icon;
-    private char currentUnit = 'C';
+
+    // TODO: Refactor this to be an enum
+    public static char currentUnit = 'C';
 
 
     public Weather(String description, double temp, double minTemp, double maxTemp,
@@ -33,12 +35,8 @@ public class Weather {
         this.currentTime = currentTime;
     }
 
-    public void setCurrentUnit(char unit) {
+    public static void setCurrentUnit(char unit) {
         currentUnit = unit;
-    }
-
-    public char getCurrentUnit() {
-        return currentUnit;
     }
 
     public double convertToCelsius(char unit) {
@@ -67,7 +65,7 @@ public class Weather {
                 celsiusTemp = temp - 273.15;
                 break;
             case 'F':
-                celsiusTemp = (temp - 32) / (5 / 9);
+                celsiusTemp = (temp - 32) * (5 / 9);
                 break;
 
             default:
@@ -75,7 +73,19 @@ public class Weather {
                 break;
         }
 
+        setCurrentUnit('C');
+
         return celsiusTemp;
+    }
+
+    public static double convertTemp(final double temp, final char to) {
+        if (to == 'F') {
+            setCurrentUnit('F');
+            return (temp + 32 * 9) / 5;
+        } else {
+            setCurrentUnit('C');
+            return (temp - 32) * (5 / 9);
+        }
     }
 
     public String capitalizeDescription() {

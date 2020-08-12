@@ -3,6 +3,9 @@ package com.micah.liveweather;
 import android.os.Bundle;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
@@ -17,6 +20,7 @@ import com.google.android.material.navigation.NavigationView;
 
 public class MainActivity extends AppCompatActivity {
     private AppBarConfiguration mAppBarConfiguration;
+    private TextView mTvMainTemp;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -25,7 +29,7 @@ public class MainActivity extends AppCompatActivity {
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
-        DrawerLayout drawer = findViewById(R.id.drawer_layout);
+        final DrawerLayout drawer = findViewById(R.id.drawer_layout);
         NavigationView navigationView = findViewById(R.id.nav_view);
         // Passing each menu ID as a set of Ids because each
         // menu should be considered as top level destinations.

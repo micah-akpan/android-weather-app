@@ -20,5 +20,39 @@
         android:layout_gravity="start"
         android:fitsSystemWindows="true"
         app:headerLayout="@layout/nav_header_main"
-        app:menu="@menu/activity_main_drawer" />
+        app:menu="@menu/activity_main_drawer" >
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <Button
+                android:id="@+id/tvDrawerCelsius"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="200dp"
+                android:background="#2979FF"
+                android:text="C"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <Button
+                android:id="@+id/tvDrawerFahr"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:background="#2979FF"
+                android:backgroundTint="#2979FF"
+                android:enabled="true"
+                android:text="F"
+                android:textAlignment="center"
+                android:textColor="#FFFFFF"
+                android:textStyle="bold"
+                app:layout_constraintStart_toEndOf="@+id/tvDrawerCelsius"
+                app:layout_constraintTop_toTopOf="@+id/tvDrawerCelsius" />
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </com.google.android.material.navigation.NavigationView>
 </androidx.drawerlayout.widget.DrawerLayout>
