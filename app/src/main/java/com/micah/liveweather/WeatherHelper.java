@@ -38,6 +38,22 @@ public class WeatherHelper {
         return url;
     }
 
+    public static URL buildURL(double latitude, double longitude) {
+        URL url = null;
+        Uri uri = Uri.parse(BASE_API_URL).buildUpon()
+                .appendQueryParameter("lat", String.valueOf(latitude))
+                .appendQueryParameter("lon", String.valueOf(longitude))
+                .appendQueryParameter(API_QUERY_PARAMETER_KEY, API_KEY)
+                .build();
+
+        try {
+            url = new URL(uri.toString());
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        return url;
+    }
+
     public static String getWeatherData(@NonNull URL url) {
         HttpURLConnection connection = null;
 

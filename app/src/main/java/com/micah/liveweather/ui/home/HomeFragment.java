@@ -1,6 +1,10 @@
 package com.micah.liveweather.ui.home;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.pm.PackageManager;
+import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -13,12 +17,16 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.ActivityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 
+import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.location.LocationServices;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.micah.liveweather.MathHelper;
 import com.micah.liveweather.R;
 import com.micah.liveweather.Weather;
@@ -28,6 +36,7 @@ import java.net.URL;
 
 public class HomeFragment extends Fragment {
 
+    private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private HomeViewModel homeViewModel;
     private Context mContext;
     public static final String OPENWEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
@@ -36,6 +45,12 @@ public class HomeFragment extends Fragment {
 
     double mWeatherTemp = 0;
     private TextView mTvUnitTemp;
+    private FusedLocationProviderClient mFusedLocationClient;
+
+    private static class Coord {
+        static double longitude;
+        static double latitude;
+    }
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
@@ -75,8 +90,49 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        displayContent();
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(getActivity());
+
+        if (!userHasPermission()) {
+            requestPermissions(new String[]{
+              Manifest.permission.ACCESS_FINE_LOCATION
+            }, LOCATION_PERMISSION_REQUEST_CODE);
+        } else {
+            getUserLocation();
+        }
         return root;
+    }
+
+    public boolean userHasPermission() {
+        return ActivityCompat.checkSelfPermission(getActivity(),
+                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @SuppressLint("MissingPermission")
+    public void getUserLocation() {
+        mFusedLocationClient.getLastLocation()
+                .addOnSuccessListener(getActivity(), new OnSuccessListener<Location>() {
+                    @Override
+                    public void onSuccess(Location location) {
+                        Log.i("Location: ", String.valueOf(location.getLatitude()));
+                        if (location != null) {
+                            Coord.latitude = location.getLatitude();
+                            Coord.longitude = location.getLongitude();
+
+                            displayWeatherInfo();
+                        }
+                    }
+                });
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
+            getUserLocation();
+        } else {
+            getActivity().finish();
+        }
     }
 
     private void convertTempToCelsius() {
@@ -100,9 +156,9 @@ public class HomeFragment extends Fragment {
     }
 
 
-    private void displayContent() {
+    private void displayWeatherInfo() {
         try {
-            URL url = WeatherHelper.buildURL("Lagos");
+            URL url = WeatherHelper.buildURL(Coord.latitude, Coord.longitude);
             new HomeFragment.WeatherQueryTask().execute(url);
         } catch (Exception e) {
             Log.e("Error: ", e.toString());
