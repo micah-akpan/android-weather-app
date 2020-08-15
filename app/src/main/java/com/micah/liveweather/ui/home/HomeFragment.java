@@ -91,20 +91,24 @@ public class HomeFragment extends Fragment {
         });
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(getActivity());
-
-        if (!userHasPermission()) {
-            requestPermissions(new String[]{
-              Manifest.permission.ACCESS_FINE_LOCATION
-            }, LOCATION_PERMISSION_REQUEST_CODE);
-        } else {
-            getUserLocation();
-        }
         return root;
     }
 
     public boolean userHasPermission() {
         return ActivityCompat.checkSelfPermission(getActivity(),
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (!userHasPermission()) {
+            requestPermissions(new String[]{
+                    Manifest.permission.ACCESS_FINE_LOCATION
+            }, LOCATION_PERMISSION_REQUEST_CODE);
+        } else {
+            getUserLocation();
+        }
     }
 
     @SuppressLint("MissingPermission")

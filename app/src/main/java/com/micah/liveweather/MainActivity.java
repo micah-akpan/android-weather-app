@@ -1,6 +1,7 @@
 package com.micah.liveweather;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -42,6 +43,11 @@ public class MainActivity extends AppCompatActivity {
         NavigationUI.setupWithNavController(navigationView, navController);
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        Log.d("MainActivity: ", "onResume Called");
+    }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
