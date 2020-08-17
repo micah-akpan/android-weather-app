@@ -22,6 +22,7 @@ public class WeatherHelper {
     public static final String API_KEY = "f4b7c212a14a8efd5a0f08e9cf50a192";
     public static final String API_LOCATION_TEXT = "q";
     public static final String OPEN_WEATHER_MAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
+    public static URL WEATHER_REQUEST_URL;
 
     public static URL buildURL(String location) {
         URL url = null;
@@ -48,6 +49,7 @@ public class WeatherHelper {
 
         try {
             url = new URL(uri.toString());
+            setWeatherRequestUrl(url);
         } catch (MalformedURLException e) {
             e.printStackTrace();
         }
@@ -113,5 +115,9 @@ public class WeatherHelper {
             e.printStackTrace();
         }
         return weather;
+    }
+
+    static void setWeatherRequestUrl(URL url) {
+        WEATHER_REQUEST_URL = url;
     }
 }
