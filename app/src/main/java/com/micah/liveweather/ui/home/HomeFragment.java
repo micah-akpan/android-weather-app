@@ -9,10 +9,14 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.SearchView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -99,6 +103,7 @@ public class HomeFragment extends Fragment {
         });
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(getActivity());
+        setHasOptionsMenu(true);
         return root;
     }
 
@@ -152,16 +157,12 @@ public class HomeFragment extends Fragment {
     @SuppressLint("MissingPermission")
     public void getUserLocation() {
         mFusedLocationClient.getLastLocation()
-                .addOnSuccessListener(getActivity(), new OnSuccessListener<Location>() {
-                    @Override
-                    public void onSuccess(Location location) {
-                        Log.i("Location: ", String.valueOf(location.getLatitude()));
-                        if (location != null) {
-                            Coord.latitude = location.getLatitude();
-                            Coord.longitude = location.getLongitude();
+                .addOnSuccessListener(getActivity(), location -> {
+                    if (location != null) {
+                        Coord.latitude = location.getLatitude();
+                        Coord.longitude = location.getLongitude();
 
-                            displayWeatherInfo();
-                        }
+                        displayWeatherInfo(Coord.latitude, Coord.longitude);
                     }
                 });
     }
@@ -197,10 +198,41 @@ public class HomeFragment extends Fragment {
         }
     }
 
+    @Override
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_main, menu);
+        MenuItem searchItem = menu.findItem(R.id.app_bar_search);
+        SearchView searchView = (SearchView) searchItem.getActionView();
 
-    private void displayWeatherInfo() {
+        searchView.setQueryHint("Search by cities");
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                displayWeatherInfo(query);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
+        });
+        super.onCreateOptionsMenu(menu, inflater);
+    }
+
+    private void displayWeatherInfo(String location) {
         try {
-            URL url = WeatherHelper.buildURL(Coord.latitude, Coord.longitude);
+            URL url = WeatherHelper.buildURL(location);
+            new HomeFragment.WeatherQueryTask().execute(url);
+        } catch (Exception e) {
+            Log.e("Error: ", e.toString());
+        }
+    }
+
+    private void displayWeatherInfo(double lat, double lon) {
+        try {
+            URL url = WeatherHelper.buildURL(lat, lon);
             new HomeFragment.WeatherQueryTask().execute(url);
         } catch (Exception e) {
             Log.e("Error: ", e.toString());
