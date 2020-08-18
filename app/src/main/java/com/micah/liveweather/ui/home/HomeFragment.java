@@ -23,6 +23,12 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
+import androidx.work.Data;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkInfo;
+import androidx.work.WorkManager;
+import androidx.work.WorkRequest;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
@@ -31,8 +37,10 @@ import com.micah.liveweather.MathHelper;
 import com.micah.liveweather.R;
 import com.micah.liveweather.Weather;
 import com.micah.liveweather.WeatherHelper;
+import com.micah.liveweather.WeatherUpdateWorker;
 
 import java.net.URL;
+import java.util.concurrent.TimeUnit;
 
 public class HomeFragment extends Fragment {
 
@@ -94,6 +102,30 @@ public class HomeFragment extends Fragment {
         return root;
     }
 
+    public void startScheduledWork() {
+        URL url = WeatherHelper.buildURL(Coord.latitude, Coord.longitude);
+        WorkRequest weatherUpdateRequest = new PeriodicWorkRequest
+                 .Builder(WeatherUpdateWorker.class, 15, TimeUnit.MINUTES)
+                .setInputData(
+                        new Data.Builder()
+                        .putString("REQUEST_URL", url.toString())
+                        .build()
+                )
+                .build();
+        WorkManager.getInstance(getActivity()).enqueue(weatherUpdateRequest);
+
+        // get result
+        WorkManager.getInstance(getActivity())
+                .getWorkInfoByIdLiveData(weatherUpdateRequest.getId())
+                .observe(getViewLifecycleOwner(), info -> {
+                    Log.d("HomeFragment", info.getId().toString());
+                   if (info != null && info.getState().isFinished()) {
+                       String myResult = info.getOutputData().getString("WEATHER_UPDATE_RESULT");
+                       Log.d("HomeFragment Result", myResult);
+                   }
+                });
+    }
+
     public boolean userHasPermission() {
         return ActivityCompat.checkSelfPermission(getActivity(),
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
@@ -109,6 +141,12 @@ public class HomeFragment extends Fragment {
         } else {
             getUserLocation();
         }
+    }
+
+    @Override
+    public void onPause() {
+        super.onPause();
+        startScheduledWork();
     }
 
     @SuppressLint("MissingPermission")
