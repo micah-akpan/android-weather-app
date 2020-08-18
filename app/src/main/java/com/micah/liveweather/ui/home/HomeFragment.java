@@ -2,6 +2,7 @@ package com.micah.liveweather.ui.home;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.SearchManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -15,6 +16,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CursorAdapter;
 import android.widget.ImageView;
 import android.widget.SearchView;
 import android.widget.TextView;
@@ -204,7 +206,12 @@ public class HomeFragment extends Fragment {
         MenuItem searchItem = menu.findItem(R.id.app_bar_search);
         SearchView searchView = (SearchView) searchItem.getActionView();
 
-        searchView.setQueryHint("Search by cities");
+//        SearchManager searchManager = (SearchManager) getActivity().getSystemService(Context.SEARCH_SERVICE);
+//        SearchView searchView = (SearchView) searchItem.getActionView();
+//
+//        searchView.setSearchableInfo(searchManager.getSearchableInfo(getActivity().getComponentName()));
+
+        searchView.setQueryHint(getResources().getString(R.string.search_hint));
 
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
@@ -253,7 +260,7 @@ public class HomeFragment extends Fragment {
         @Override
         protected String doInBackground(URL... urls) {
             URL url = urls[0];
-            String result = "";
+            String result = null;
 
             try {
                 result = WeatherHelper.getWeatherData(url);
@@ -265,39 +272,43 @@ public class HomeFragment extends Fragment {
 
         @Override
         protected void onPostExecute(String result) {
-            mContext = getContext();
-            View view = getView();
-            TextView tvMainTemp = view.findViewById(R.id.tvMainTemp);
-            TextView tvMinTemp = view.findViewById(R.id.tvNightTemp);
-            TextView tvMaxTemp = view.findViewById(R.id.tvDayTemp);
-            TextView tvWeatherDescription = view.findViewById(R.id.tvWeatherText);
-            TextView tvFeelsLikeTemp = view.findViewById(R.id.tvPerceivedTemp);
-            TextView tvUnitTemp = view.findViewById(R.id.tvUnitTemp);
-            TextView tvDateTemp = view.findViewById(R.id.tvDateTime);
-            ImageView ivWeatherImage = view.findViewById(R.id.ivWeatherImage);
+            if (result != null) {
+                mContext = getContext();
+                View view = getView();
+                TextView tvMainTemp = view.findViewById(R.id.tvMainTemp);
+                TextView tvMinTemp = view.findViewById(R.id.tvNightTemp);
+                TextView tvMaxTemp = view.findViewById(R.id.tvDayTemp);
+                TextView tvWeatherDescription = view.findViewById(R.id.tvWeatherText);
+                TextView tvFeelsLikeTemp = view.findViewById(R.id.tvPerceivedTemp);
+                TextView tvUnitTemp = view.findViewById(R.id.tvUnitTemp);
+                TextView tvDateTemp = view.findViewById(R.id.tvDateTime);
+                ImageView ivWeatherImage = view.findViewById(R.id.ivWeatherImage);
 
-            Weather todayWeather = WeatherHelper.parseWeatherData(result);
+                Weather todayWeather = WeatherHelper.parseWeatherData(result);
 
-            int mainTemp = (int) todayWeather.convertToCelsius('K');
-            int minTemp = (int) todayWeather.convertToCelsius(todayWeather.minTemp, 'K');
-            int maxTemp = (int) todayWeather.convertToCelsius(todayWeather.maxTemp, 'K');
-            int feelsLikeTemp = (int) todayWeather.convertToCelsius(todayWeather.feelsLikeTemp, 'K');
-            String imageUrl = OPENWEATHERMAP_BASE_IMAGE_URL + todayWeather.icon + "@2x.png";
+                int mainTemp = (int) todayWeather.convertToCelsius('K');
+                int minTemp = (int) todayWeather.convertToCelsius(todayWeather.minTemp, 'K');
+                int maxTemp = (int) todayWeather.convertToCelsius(todayWeather.maxTemp, 'K');
+                int feelsLikeTemp = (int) todayWeather.convertToCelsius(todayWeather.feelsLikeTemp, 'K');
+                String imageUrl = OPENWEATHERMAP_BASE_IMAGE_URL + todayWeather.icon + "@2x.png";
 
 
-            tvMainTemp.setText(String.valueOf(mainTemp));
-            tvMinTemp.setText(String.valueOf(minTemp));
-            tvMaxTemp.setText(String.valueOf(maxTemp));
-            tvWeatherDescription.setText(todayWeather.capitalizeDescription());
-            tvFeelsLikeTemp.setText("Feels like " + String.valueOf(feelsLikeTemp));
-            tvUnitTemp.setText(String.valueOf(Weather.currentUnit));
+                tvMainTemp.setText(String.valueOf(mainTemp));
+                tvMinTemp.setText(String.valueOf(minTemp));
+                tvMaxTemp.setText(String.valueOf(maxTemp));
+                tvWeatherDescription.setText(todayWeather.capitalizeDescription());
+                tvFeelsLikeTemp.setText("Feels like " + String.valueOf(feelsLikeTemp));
+                tvUnitTemp.setText(String.valueOf(Weather.currentUnit));
 
-            todayWeather.setWeatherImage(mContext.getApplicationContext(), imageUrl, ivWeatherImage);
-            tvDateTemp.setText(Weather.getWeatherTime());
+                todayWeather.setWeatherImage(mContext.getApplicationContext(), imageUrl, ivWeatherImage);
+                tvDateTemp.setText(Weather.getWeatherTime());
 
-            mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
+                mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
 
-            super.onPostExecute(result);
+                super.onPostExecute(result);
+            } else {
+                // TODO: Show a toast here or something
+            }
         }
     }
 }
