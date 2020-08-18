@@ -21,7 +21,6 @@ public class WeatherHelper {
     public static final String API_QUERY_PARAMETER_KEY = "appid";
     public static final String API_KEY = "f4b7c212a14a8efd5a0f08e9cf50a192";
     public static final String API_LOCATION_TEXT = "q";
-    public static final String OPEN_WEATHER_MAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
     public static URL WEATHER_REQUEST_URL;
 
     public static URL buildURL(String location) {
@@ -72,7 +71,7 @@ public class WeatherHelper {
                 boolean hasData = scanner.hasNext();
                 return hasData ? scanner.next() : null;
             } else {
-                return "";
+                return null;
             }
         } catch (IOException e) {
            e.printStackTrace();
@@ -80,7 +79,7 @@ public class WeatherHelper {
             if (connection != null) connection.disconnect();
         }
 
-        return "";
+        return null;
     }
 
     public static Weather parseWeatherData(String json) {

@@ -2,6 +2,7 @@ package com.micah.liveweather.ui.home;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.SearchManager;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.location.Location;
@@ -9,10 +10,15 @@ import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
+import android.widget.CursorAdapter;
 import android.widget.ImageView;
+import android.widget.SearchView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -99,6 +105,7 @@ public class HomeFragment extends Fragment {
         });
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(getActivity());
+        setHasOptionsMenu(true);
         return root;
     }
 
@@ -152,16 +159,12 @@ public class HomeFragment extends Fragment {
     @SuppressLint("MissingPermission")
     public void getUserLocation() {
         mFusedLocationClient.getLastLocation()
-                .addOnSuccessListener(getActivity(), new OnSuccessListener<Location>() {
-                    @Override
-                    public void onSuccess(Location location) {
-                        Log.i("Location: ", String.valueOf(location.getLatitude()));
-                        if (location != null) {
-                            Coord.latitude = location.getLatitude();
-                            Coord.longitude = location.getLongitude();
+                .addOnSuccessListener(getActivity(), location -> {
+                    if (location != null) {
+                        Coord.latitude = location.getLatitude();
+                        Coord.longitude = location.getLongitude();
 
-                            displayWeatherInfo();
-                        }
+                        displayWeatherInfo(Coord.latitude, Coord.longitude);
                     }
                 });
     }
@@ -197,10 +200,46 @@ public class HomeFragment extends Fragment {
         }
     }
 
+    @Override
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_main, menu);
+        MenuItem searchItem = menu.findItem(R.id.app_bar_search);
+        SearchView searchView = (SearchView) searchItem.getActionView();
 
-    private void displayWeatherInfo() {
+//        SearchManager searchManager = (SearchManager) getActivity().getSystemService(Context.SEARCH_SERVICE);
+//        SearchView searchView = (SearchView) searchItem.getActionView();
+//
+//        searchView.setSearchableInfo(searchManager.getSearchableInfo(getActivity().getComponentName()));
+
+        searchView.setQueryHint(getResources().getString(R.string.search_hint));
+
+        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+            @Override
+            public boolean onQueryTextSubmit(String query) {
+                displayWeatherInfo(query);
+                return true;
+            }
+
+            @Override
+            public boolean onQueryTextChange(String newText) {
+                return false;
+            }
+        });
+        super.onCreateOptionsMenu(menu, inflater);
+    }
+
+    private void displayWeatherInfo(String location) {
         try {
-            URL url = WeatherHelper.buildURL(Coord.latitude, Coord.longitude);
+            URL url = WeatherHelper.buildURL(location);
+            new HomeFragment.WeatherQueryTask().execute(url);
+        } catch (Exception e) {
+            Log.e("Error: ", e.toString());
+        }
+    }
+
+    private void displayWeatherInfo(double lat, double lon) {
+        try {
+            URL url = WeatherHelper.buildURL(lat, lon);
             new HomeFragment.WeatherQueryTask().execute(url);
         } catch (Exception e) {
             Log.e("Error: ", e.toString());
@@ -221,7 +260,7 @@ public class HomeFragment extends Fragment {
         @Override
         protected String doInBackground(URL... urls) {
             URL url = urls[0];
-            String result = "";
+            String result = null;
 
             try {
                 result = WeatherHelper.getWeatherData(url);
@@ -233,39 +272,43 @@ public class HomeFragment extends Fragment {
 
         @Override
         protected void onPostExecute(String result) {
-            mContext = getContext();
-            View view = getView();
-            TextView tvMainTemp = view.findViewById(R.id.tvMainTemp);
-            TextView tvMinTemp = view.findViewById(R.id.tvNightTemp);
-            TextView tvMaxTemp = view.findViewById(R.id.tvDayTemp);
-            TextView tvWeatherDescription = view.findViewById(R.id.tvWeatherText);
-            TextView tvFeelsLikeTemp = view.findViewById(R.id.tvPerceivedTemp);
-            TextView tvUnitTemp = view.findViewById(R.id.tvUnitTemp);
-            TextView tvDateTemp = view.findViewById(R.id.tvDateTime);
-            ImageView ivWeatherImage = view.findViewById(R.id.ivWeatherImage);
+            if (result != null) {
+                mContext = getContext();
+                View view = getView();
+                TextView tvMainTemp = view.findViewById(R.id.tvMainTemp);
+                TextView tvMinTemp = view.findViewById(R.id.tvNightTemp);
+                TextView tvMaxTemp = view.findViewById(R.id.tvDayTemp);
+                TextView tvWeatherDescription = view.findViewById(R.id.tvWeatherText);
+                TextView tvFeelsLikeTemp = view.findViewById(R.id.tvPerceivedTemp);
+                TextView tvUnitTemp = view.findViewById(R.id.tvUnitTemp);
+                TextView tvDateTemp = view.findViewById(R.id.tvDateTime);
+                ImageView ivWeatherImage = view.findViewById(R.id.ivWeatherImage);
 
-            Weather todayWeather = WeatherHelper.parseWeatherData(result);
+                Weather todayWeather = WeatherHelper.parseWeatherData(result);
 
-            int mainTemp = (int) todayWeather.convertToCelsius('K');
-            int minTemp = (int) todayWeather.convertToCelsius(todayWeather.minTemp, 'K');
-            int maxTemp = (int) todayWeather.convertToCelsius(todayWeather.maxTemp, 'K');
-            int feelsLikeTemp = (int) todayWeather.convertToCelsius(todayWeather.feelsLikeTemp, 'K');
-            String imageUrl = OPENWEATHERMAP_BASE_IMAGE_URL + todayWeather.icon + "@2x.png";
+                int mainTemp = (int) todayWeather.convertToCelsius('K');
+                int minTemp = (int) todayWeather.convertToCelsius(todayWeather.minTemp, 'K');
+                int maxTemp = (int) todayWeather.convertToCelsius(todayWeather.maxTemp, 'K');
+                int feelsLikeTemp = (int) todayWeather.convertToCelsius(todayWeather.feelsLikeTemp, 'K');
+                String imageUrl = OPENWEATHERMAP_BASE_IMAGE_URL + todayWeather.icon + "@2x.png";
 
 
-            tvMainTemp.setText(String.valueOf(mainTemp));
-            tvMinTemp.setText(String.valueOf(minTemp));
-            tvMaxTemp.setText(String.valueOf(maxTemp));
-            tvWeatherDescription.setText(todayWeather.capitalizeDescription());
-            tvFeelsLikeTemp.setText("Feels like " + String.valueOf(feelsLikeTemp));
-            tvUnitTemp.setText(String.valueOf(Weather.currentUnit));
+                tvMainTemp.setText(String.valueOf(mainTemp));
+                tvMinTemp.setText(String.valueOf(minTemp));
+                tvMaxTemp.setText(String.valueOf(maxTemp));
+                tvWeatherDescription.setText(todayWeather.capitalizeDescription());
+                tvFeelsLikeTemp.setText("Feels like " + String.valueOf(feelsLikeTemp));
+                tvUnitTemp.setText(String.valueOf(Weather.currentUnit));
 
-            todayWeather.setWeatherImage(mContext.getApplicationContext(), imageUrl, ivWeatherImage);
-            tvDateTemp.setText(Weather.getWeatherTime());
+                todayWeather.setWeatherImage(mContext.getApplicationContext(), imageUrl, ivWeatherImage);
+                tvDateTemp.setText(Weather.getWeatherTime());
 
-            mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
+                mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
 
-            super.onPostExecute(result);
+                super.onPostExecute(result);
+            } else {
+                // TODO: Show a toast here or something
+            }
         }
     }
 }
