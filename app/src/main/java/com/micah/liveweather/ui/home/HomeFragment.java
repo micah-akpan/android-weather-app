@@ -18,8 +18,10 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CursorAdapter;
 import android.widget.ImageView;
+import android.widget.ProgressBar;
 import android.widget.SearchView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -60,6 +62,7 @@ public class HomeFragment extends Fragment {
     double mWeatherTemp = 0;
     private TextView mTvUnitTemp;
     private FusedLocationProviderClient mFusedLocationClient;
+    private String mLocationSearchQuery;
 
     private static class Coord {
         static double longitude;
@@ -216,6 +219,7 @@ public class HomeFragment extends Fragment {
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
+                mLocationSearchQuery = query;
                 displayWeatherInfo(query);
                 return true;
             }
@@ -249,13 +253,17 @@ public class HomeFragment extends Fragment {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) { }
 
-    public class WeatherQueryTask extends AsyncTask<URL, Void, String> {
+    public class WeatherQueryTask extends AsyncTask<URL, Integer, String> {
+
+        private View mView = getView();
+        private ProgressBar mProgressBar;
 
         @Override
         protected void onPreExecute() {
-            super.onPreExecute();
+            mProgressBar = (ProgressBar) mView.findViewById(R.id.wUpdateProgressBar);
+            mProgressBar.setVisibility(View.VISIBLE);
+            mProgressBar.setProgress(1);
         }
-
 
         @Override
         protected String doInBackground(URL... urls) {
@@ -263,7 +271,9 @@ public class HomeFragment extends Fragment {
             String result = null;
 
             try {
+                publishProgress(2);
                 result = WeatherHelper.getWeatherData(url);
+                publishProgress(3);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -271,18 +281,24 @@ public class HomeFragment extends Fragment {
         }
 
         @Override
+        protected void onProgressUpdate(Integer... progress) {
+           int progressValue = progress[0];
+           mProgressBar.setProgress(progressValue);
+        }
+
+        @Override
         protected void onPostExecute(String result) {
             if (result != null) {
                 mContext = getContext();
-                View view = getView();
-                TextView tvMainTemp = view.findViewById(R.id.tvMainTemp);
-                TextView tvMinTemp = view.findViewById(R.id.tvNightTemp);
-                TextView tvMaxTemp = view.findViewById(R.id.tvDayTemp);
-                TextView tvWeatherDescription = view.findViewById(R.id.tvWeatherText);
-                TextView tvFeelsLikeTemp = view.findViewById(R.id.tvPerceivedTemp);
-                TextView tvUnitTemp = view.findViewById(R.id.tvUnitTemp);
-                TextView tvDateTemp = view.findViewById(R.id.tvDateTime);
-                ImageView ivWeatherImage = view.findViewById(R.id.ivWeatherImage);
+                mView = getView();
+                TextView tvMainTemp = mView.findViewById(R.id.tvMainTemp);
+                TextView tvMinTemp = mView.findViewById(R.id.tvNightTemp);
+                TextView tvMaxTemp = mView.findViewById(R.id.tvDayTemp);
+                TextView tvWeatherDescription = mView.findViewById(R.id.tvWeatherText);
+                TextView tvFeelsLikeTemp = mView.findViewById(R.id.tvPerceivedTemp);
+                TextView tvUnitTemp = mView.findViewById(R.id.tvUnitTemp);
+                TextView tvDateTemp = mView.findViewById(R.id.tvDateTime);
+                ImageView ivWeatherImage = mView.findViewById(R.id.ivWeatherImage);
 
                 Weather todayWeather = WeatherHelper.parseWeatherData(result);
 
@@ -304,10 +320,13 @@ public class HomeFragment extends Fragment {
                 tvDateTemp.setText(Weather.getWeatherTime());
 
                 mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
+                mProgressBar.setVisibility(View.GONE);
 
                 super.onPostExecute(result);
             } else {
+                mProgressBar.setVisibility(View.GONE);
                 // TODO: Show a toast here or something
+                Toast.makeText(mContext, "There are no weather information for " + mLocationSearchQuery + " at this time", Toast.LENGTH_SHORT).show();
             }
         }
     }
