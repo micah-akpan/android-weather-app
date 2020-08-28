@@ -23,4 +23,30 @@
     <string name="search_location">Search</string>
     <string name="app_bar_search_text">Search Location</string>
     <string name="search_hint">Search Cities</string>
+    <string name="title_activity_settings">Settings</string>
+
+    <!-- Preference Titles -->
+    <string name="messages_header">Messages</string>
+    <string name="sync_header">Sync</string>
+
+    <!-- Messages Preferences -->
+    <string name="signature_title">Your signature</string>
+    <string name="reply_title">Default reply action</string>
+
+    <!-- Sync Preferences -->
+    <string name="sync_title">Sync email periodically</string>
+    <string name="attachment_title">Download incoming attachments</string>
+    <string name="attachment_summary_on">Automatically download attachments for incoming emails
+    </string>
+    <string name="attachment_summary_off">Only download attachments when manually requested</string>
+    <string name="pref_notification_summary_on">You will receive hourly weather update</string>
+    <string name="pref_notification_summary_off">You will not receive hourly weather update</string>
+    <string name="pref_notification_title">Allow Push Notifications</string>
+    <string name="pref_name_display_text">Display Name</string>
+    <string name="pref_language_title">Preferred Language</string>
+    <string name="pref_language_default_english">english</string>
+    <string name="pref_name_default_value">Your name</string>
+    <string name="pref_display_name_key">pref_display_name</string>
+    <string name="pref_notification_enable_key">pref_notification_enable</string>
+    <string name="pref_lang_key">preferred_language</string>
 </resources>

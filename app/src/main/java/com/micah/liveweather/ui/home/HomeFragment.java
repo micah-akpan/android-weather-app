@@ -2,10 +2,9 @@ package com.micah.liveweather.ui.home;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.SearchManager;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,7 +15,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.CursorAdapter;
 import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.SearchView;
@@ -24,23 +22,20 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
-import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
+import androidx.preference.PreferenceManager;
 import androidx.work.Data;
-import androidx.work.OneTimeWorkRequest;
 import androidx.work.PeriodicWorkRequest;
-import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 import androidx.work.WorkRequest;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.tasks.OnSuccessListener;
+import com.google.android.material.navigation.NavigationView;
 import com.micah.liveweather.MathHelper;
 import com.micah.liveweather.R;
 import com.micah.liveweather.Weather;
@@ -54,9 +49,8 @@ public class HomeFragment extends Fragment {
 
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     private HomeViewModel homeViewModel;
-    private Context mContext;
-    public static final String OPENWEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
     private FragmentActivity mFragmentActivity;
+    public static final String OPENWEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
     TextView mTvMainTemp;
 
     double mWeatherTemp = 0;
@@ -71,6 +65,7 @@ public class HomeFragment extends Fragment {
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
+        mFragmentActivity = getActivity();
         homeViewModel =
                 ViewModelProviders.of(this).get(HomeViewModel.class);
         View root = inflater.inflate(R.layout.fragment_home, container, false);
@@ -85,8 +80,6 @@ public class HomeFragment extends Fragment {
 
         mTvMainTemp = root.findViewById(R.id.tvMainTemp);
         mTvUnitTemp = root.findViewById(R.id.tvUnitTemp);
-
-        mFragmentActivity = getActivity();
 
         Button celsiusDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerCelsius);
         Button fahrDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerFahr);
@@ -107,8 +100,10 @@ public class HomeFragment extends Fragment {
             }
         });
 
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(getActivity());
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(mFragmentActivity);
         setHasOptionsMenu(true);
+
+        PreferenceManager.setDefaultValues(mFragmentActivity, R.xml.general_preferences, false);
         return root;
     }
 
@@ -122,10 +117,10 @@ public class HomeFragment extends Fragment {
                         .build()
                 )
                 .build();
-        WorkManager.getInstance(getActivity()).enqueue(weatherUpdateRequest);
+        WorkManager.getInstance(mFragmentActivity).enqueue(weatherUpdateRequest);
 
         // get result
-        WorkManager.getInstance(getActivity())
+        WorkManager.getInstance(mFragmentActivity)
                 .getWorkInfoByIdLiveData(weatherUpdateRequest.getId())
                 .observe(getViewLifecycleOwner(), info -> {
                     Log.d("HomeFragment", info.getId().toString());
@@ -137,7 +132,7 @@ public class HomeFragment extends Fragment {
     }
 
     public boolean userHasPermission() {
-        return ActivityCompat.checkSelfPermission(getActivity(),
+        return ActivityCompat.checkSelfPermission(mFragmentActivity,
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
     }
 
@@ -151,6 +146,7 @@ public class HomeFragment extends Fragment {
         } else {
             getUserLocation();
         }
+        this.updateNavHeaderInfo();
     }
 
     @Override
@@ -159,10 +155,24 @@ public class HomeFragment extends Fragment {
         startScheduledWork();
     }
 
+    public void updateNavHeaderInfo() {
+        NavigationView navigationView = mFragmentActivity.findViewById(R.id.nav_view);
+        View headerView = navigationView.getHeaderView(0);
+
+        TextView tvNavHeaderUserName = headerView.findViewById(R.id.tvUsername);
+        TextView tvNavHeaderUserlocation = headerView.findViewById(R.id.tvUserLocation);
+
+        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(mFragmentActivity);
+        String userName = pref.getString(getResources().getString(R.string.pref_display_name_key), "");
+
+        tvNavHeaderUserName.setText(userName);
+        tvNavHeaderUserlocation.setText("Amsterdam");
+    }
+
     @SuppressLint("MissingPermission")
     public void getUserLocation() {
         mFusedLocationClient.getLastLocation()
-                .addOnSuccessListener(getActivity(), location -> {
+                .addOnSuccessListener(mFragmentActivity, location -> {
                     if (location != null) {
                         Coord.latitude = location.getLatitude();
                         Coord.longitude = location.getLongitude();
@@ -179,7 +189,7 @@ public class HomeFragment extends Fragment {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
             getUserLocation();
         } else {
-            getActivity().finish();
+            mFragmentActivity.finish();
         }
     }
 
@@ -289,7 +299,6 @@ public class HomeFragment extends Fragment {
         @Override
         protected void onPostExecute(String result) {
             if (result != null) {
-                mContext = getContext();
                 mView = getView();
                 TextView tvMainTemp = mView.findViewById(R.id.tvMainTemp);
                 TextView tvMinTemp = mView.findViewById(R.id.tvNightTemp);
@@ -316,7 +325,7 @@ public class HomeFragment extends Fragment {
                 tvFeelsLikeTemp.setText("Feels like " + String.valueOf(feelsLikeTemp));
                 tvUnitTemp.setText(String.valueOf(Weather.currentUnit));
 
-                todayWeather.setWeatherImage(mContext.getApplicationContext(), imageUrl, ivWeatherImage);
+                todayWeather.setWeatherImage(mFragmentActivity.getApplicationContext(), imageUrl, ivWeatherImage);
                 tvDateTemp.setText(Weather.getWeatherTime());
 
                 mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
@@ -326,7 +335,9 @@ public class HomeFragment extends Fragment {
             } else {
                 mProgressBar.setVisibility(View.GONE);
                 // TODO: Show a toast here or something
-                Toast.makeText(mContext, "There are no weather information for " + mLocationSearchQuery + " at this time", Toast.LENGTH_SHORT).show();
+                if (mFragmentActivity != null) {
+                    Toast.makeText(mFragmentActivity, "There are no weather information for " + mLocationSearchQuery + " at this time", Toast.LENGTH_SHORT).show();
+                }
             }
         }
     }
