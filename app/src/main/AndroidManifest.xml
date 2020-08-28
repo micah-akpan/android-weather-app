@@ -12,11 +12,15 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="true">
+        <activity
+            android:name=".SettingsActivity"
+            android:label="@string/title_activity_settings"></activity>
+
         <service
             android:name=".WeatherLocationService"
             android:enabled="true"
             android:exported="true"
-            android:foregroundServiceType="location"></service>
+            android:foregroundServiceType="location" />
 
         <activity
             android:name=".MainActivity"
@@ -32,11 +36,9 @@
         <meta-data
             android:name="preloaded_fonts"
             android:resource="@array/preloaded_fonts" />
-
         <meta-data
             android:name="android.app.searchable"
-            android:resource="@xml/searchable"></meta-data>
-
+            android:resource="@xml/searchable" />
     </application>
 
 </manifest>

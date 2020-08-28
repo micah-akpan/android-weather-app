@@ -1,0 +1,24 @@
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        app:key="@string/pref_display_name_key"
+        app:title="@string/pref_name_display_text"
+        app:defaultValue="@string/pref_name_default_value"
+        app:useSimpleSummaryProvider="true" />
+
+    <SwitchPreferenceCompat
+        app:key="@string/pref_notification_enable_key"
+        app:summaryOn="@string/pref_notification_summary_on"
+        app:summaryOff="@string/pref_notification_summary_off"
+        app:title="@string/pref_notification_title"
+        />
+
+    <ListPreference
+        app:key="@string/pref_lang_key"
+        app:defaultValue="@string/pref_language_default_english"
+        app:entries="@array/pref_language_entries"
+        app:entryValues="@array/pref_language_values"
+        app:title="@string/pref_language_title"
+        app:useSimpleSummaryProvider="true" />
+
+</PreferenceScreen>
