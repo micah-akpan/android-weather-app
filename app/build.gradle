@@ -44,15 +44,14 @@ dependencies {
 
     // Feature module Support
     implementation "androidx.navigation:navigation-dynamic-features-fragment:$nav_version"
-
     implementation "com.google.android.gms:play-services-location:17.0.0"
-
     implementation "androidx.work:work-runtime:$work_version"
-
     implementation "androidx.work:work-rxjava2:$work_version"
 
     // work manager test helpers
     implementation "androidx.work:work-testing:$work_version"
+
+    implementation "com.android.support:support-compat:28.0.0"
 
     // Testing Navigation
     androidTestImplementation "androidx.navigation:navigation-testing:$nav_version"

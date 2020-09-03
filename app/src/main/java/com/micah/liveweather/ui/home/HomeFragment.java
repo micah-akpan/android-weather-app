@@ -2,9 +2,16 @@ package com.micah.liveweather.ui.home;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -22,6 +29,8 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.app.NotificationManagerCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
@@ -29,12 +38,14 @@ import androidx.lifecycle.ViewModelProviders;
 import androidx.preference.PreferenceManager;
 import androidx.work.Data;
 import androidx.work.PeriodicWorkRequest;
+import androidx.work.WorkInfo;
 import androidx.work.WorkManager;
 import androidx.work.WorkRequest;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.material.navigation.NavigationView;
+import com.micah.liveweather.MainActivity;
 import com.micah.liveweather.MathHelper;
 import com.micah.liveweather.R;
 import com.micah.liveweather.Weather;
@@ -49,6 +60,8 @@ import java.util.concurrent.TimeUnit;
 public class HomeFragment extends Fragment implements TaskDelegate {
 
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
+    public static final String WEATHER_NOTIFICATION_CHANNEL = "WEATHER_NOTIFICATION_CHANNEL";
+    public static final int WEATHER_NOTIFICATION_ID = 1;
     private HomeViewModel homeViewModel;
     private FragmentActivity mFragmentActivity;
     public static final String OPENWEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
@@ -141,20 +154,14 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         Button celsiusDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerCelsius);
         Button fahrDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerFahr);
         final DrawerLayout drawerLayout = mFragmentActivity.findViewById(R.id.drawer_layout);
-        celsiusDrawerBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                convertTempToCelsius();
-                drawerLayout.closeDrawers();
-            }
+        celsiusDrawerBtn.setOnClickListener(listener -> {
+            convertTempToCelsius();
+            drawerLayout.closeDrawers();
         });
 
-        fahrDrawerBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                convertTempToFahr();
-                drawerLayout.closeDrawers();
-            }
+        fahrDrawerBtn.setOnClickListener(listener -> {
+            convertTempToFahr();
+            drawerLayout.closeDrawers();
         });
 
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(mFragmentActivity);
@@ -180,12 +187,55 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         WorkManager.getInstance(mFragmentActivity)
                 .getWorkInfoByIdLiveData(weatherUpdateRequest.getId())
                 .observe(getViewLifecycleOwner(), info -> {
-                    if (info != null && info.getState().isFinished()) {
-                        String myResult = info.getOutputData().getString("WEATHER_UPDATE_RESULT");
-                        Log.d("HomeFragment Result", myResult);
+                    if (info != null) {
+                        final WorkInfo.State infoState = info.getState();
+                        Log.d("WorkInfo State", infoState.name());
+                        if (infoState == WorkInfo.State.RUNNING) {
+                            String result = info.getOutputData().getString("WEATHER_UPDATE_RESULT");
+                            if (result != null) {
+                                Log.d("HomeFragment Result", result);
+                            }
+
+                        }
                     }
                 });
     }
+
+    public void displayNotification() {
+        // Create an explicit intent for an Activity in your app
+        Intent intent = new Intent(mFragmentActivity, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        PendingIntent pendingIntent = PendingIntent.getActivity(mFragmentActivity, 0, intent, 0);
+
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(mFragmentActivity, WEATHER_NOTIFICATION_CHANNEL)
+                .setSmallIcon(R.drawable.ic_cloud)
+                .setContentTitle("Weather Notification")
+                .setContentText("Weather update")
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true);
+
+        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(mFragmentActivity);
+        notificationManager.notify(WEATHER_NOTIFICATION_ID, builder.build());
+
+    }
+
+    private void createNotificationChannel() {
+            // Create the NotificationChannel, but only on API 26+ because
+            // the NotificationChannel class is new and not in the support library
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                CharSequence name = getString(R.string.notify_channel_name);
+                String description = getString(R.string.notify_channel_description);
+                int importance = NotificationManager.IMPORTANCE_DEFAULT;
+                NotificationChannel channel = new NotificationChannel(WEATHER_NOTIFICATION_CHANNEL, name, importance);
+                channel.setDescription(description);
+                // Register the channel with the system; you can't change the importance
+                // or other notification behaviors after this
+                NotificationManager notificationManager = mFragmentActivity.getSystemService(NotificationManager.class);
+                notificationManager.createNotificationChannel(channel);
+            }
+    }
+
 
     public boolean userHasPermission() {
         return ActivityCompat.checkSelfPermission(mFragmentActivity,
@@ -202,6 +252,8 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         } else {
             getUserLocation();
         }
+        this.createNotificationChannel();
+        displayNotification();
         this.updateNavHeaderInfo();
     }
 
@@ -217,10 +269,6 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         if (this.mFetchWeatherAsyncTask != null) {
             this.mFetchWeatherAsyncTask.cancel(true);
         }
-    }
-
-    @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
     }
 
     @Override
@@ -317,7 +365,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
             URL url = WeatherHelper.buildURL(location);
             mFetchWeatherAsyncTask = new WeatherQueryAsyncTask(this).execute(url);
         } catch (Exception e) {
-           e.printStackTrace();
+            e.printStackTrace();
         }
     }
 
@@ -327,6 +375,88 @@ public class HomeFragment extends Fragment implements TaskDelegate {
             mFetchWeatherAsyncTask = new WeatherQueryAsyncTask(this).execute(url);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onViewCreated(View view, Bundle savedInstanceState) { }
+
+    public class WeatherQueryTask extends AsyncTask<URL, Integer, String> {
+
+        private View mView = getView();
+        private ProgressBar mProgressBar;
+
+        @Override
+        protected void onPreExecute() {
+            mProgressBar = (ProgressBar) mView.findViewById(R.id.wUpdateProgressBar);
+            mProgressBar.setVisibility(View.VISIBLE);
+            mProgressBar.setProgress(1);
+        }
+
+        @Override
+        protected String doInBackground(URL... urls) {
+            URL url = urls[0];
+            String result = null;
+
+            try {
+                publishProgress(2);
+                result = WeatherHelper.getWeatherData(url);
+                publishProgress(3);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return result;
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... progress) {
+           int progressValue = progress[0];
+           mProgressBar.setProgress(progressValue);
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            if (result != null) {
+                mView = getView();
+                TextView tvMainTemp = mView.findViewById(R.id.tvMainTemp);
+                TextView tvMinTemp = mView.findViewById(R.id.tvNightTemp);
+                TextView tvMaxTemp = mView.findViewById(R.id.tvDayTemp);
+                TextView tvWeatherDescription = mView.findViewById(R.id.tvWeatherText);
+                TextView tvFeelsLikeTemp = mView.findViewById(R.id.tvPerceivedTemp);
+                TextView tvUnitTemp = mView.findViewById(R.id.tvUnitTemp);
+                TextView tvDateTemp = mView.findViewById(R.id.tvDateTime);
+                ImageView ivWeatherImage = mView.findViewById(R.id.ivWeatherImage);
+
+                Weather todayWeather = WeatherHelper.parseWeatherData(result);
+
+                int mainTemp = (int) todayWeather.convertToCelsius('K');
+                int minTemp = (int) todayWeather.convertToCelsius(todayWeather.minTemp, 'K');
+                int maxTemp = (int) todayWeather.convertToCelsius(todayWeather.maxTemp, 'K');
+                int feelsLikeTemp = (int) todayWeather.convertToCelsius(todayWeather.feelsLikeTemp, 'K');
+                String imageUrl = OPENWEATHERMAP_BASE_IMAGE_URL + todayWeather.icon + "@2x.png";
+
+
+                tvMainTemp.setText(String.valueOf(mainTemp));
+                tvMinTemp.setText(String.valueOf(minTemp));
+                tvMaxTemp.setText(String.valueOf(maxTemp));
+                tvWeatherDescription.setText(todayWeather.capitalizeDescription());
+                tvFeelsLikeTemp.setText("Feels like " + String.valueOf(feelsLikeTemp));
+                tvUnitTemp.setText(String.valueOf(Weather.currentUnit));
+
+                todayWeather.setWeatherImage(mFragmentActivity.getApplicationContext(), imageUrl, ivWeatherImage);
+                tvDateTemp.setText(Weather.getWeatherTime());
+
+                mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
+                mProgressBar.setVisibility(View.GONE);
+
+                super.onPostExecute(result);
+            } else {
+                mProgressBar.setVisibility(View.GONE);
+                // TODO: Show a toast here or something
+                if (mFragmentActivity != null) {
+                    Toast.makeText(mFragmentActivity, "There are no weather information for " + mLocationSearchQuery + " at this time", Toast.LENGTH_SHORT).show();
+                }
+            }
         }
     }
 }

@@ -21,6 +21,7 @@ public class WeatherUpdateWorker extends Worker {
     @Override
     public Result doWork() {
         String weatherString = updateWeather();
+        Log.d("WeatherUpdate", weatherString);
         return Result.success(
                 new Data.Builder()
                   .putString("WEATHER_UPDATE_RESULT", weatherString)
@@ -29,9 +30,7 @@ public class WeatherUpdateWorker extends Worker {
     }
 
     public String updateWeather() {
-        Log.d("WeatherUpdateWorker", "Updating....");
         try {
-            Log.d("WeatherUpdateWorker", getInputData().getString("REQUEST_URL"));
             URL url = new URL(getInputData().getString("REQUEST_URL"));
             String jsonString = WeatherHelper.getWeatherData(url);
             return jsonString;

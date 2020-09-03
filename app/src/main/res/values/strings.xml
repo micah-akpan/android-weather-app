@@ -49,4 +49,6 @@
     <string name="pref_display_name_key">pref_display_name</string>
     <string name="pref_notification_enable_key">pref_notification_enable</string>
     <string name="pref_lang_key">preferred_language</string>
+    <string name="notify_channel_name">lw_notification_channel</string>
+    <string name="notify_channel_description">lw_notification_channel_desc</string>
 </resources>
