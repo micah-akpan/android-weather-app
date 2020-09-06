@@ -69,7 +69,7 @@ public class HomeFragment extends Fragment {
         homeViewModel =
                 ViewModelProviders.of(this).get(HomeViewModel.class);
         View root = inflater.inflate(R.layout.fragment_home, container, false);
-//        View root = inflater.inflate(R.layout.activity_main2, container, false);
+//        View root = inflater.inflate(R.layout.activity_main, container, false);
 //        final TextView textView = root.findViewById(R.id.text_home);
 //        homeViewModel.getText().observe(getViewLifecycleOwner(), new Observer<String>() {
 //            @Override
@@ -176,9 +176,11 @@ public class HomeFragment extends Fragment {
                     if (location != null) {
                         Coord.latitude = location.getLatitude();
                         Coord.longitude = location.getLongitude();
-
-                        displayWeatherInfo(Coord.latitude, Coord.longitude);
+                    } else {
+                        Coord.latitude = 6.5801382;
+                        Coord.longitude = 3.3415503;
                     }
+                    displayWeatherInfo(Coord.latitude, Coord.longitude);
                 });
     }
 
