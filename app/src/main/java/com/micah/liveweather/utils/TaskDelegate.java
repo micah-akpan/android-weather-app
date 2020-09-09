@@ -1,4 +1,4 @@
-package com.micah.liveweather.threading;
+package com.micah.liveweather.utils;
 
 import com.micah.liveweather.Weather;
 

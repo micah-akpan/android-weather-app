@@ -2,7 +2,6 @@ package com.micah.liveweather.ui.home;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
@@ -42,7 +41,7 @@ import com.micah.liveweather.Weather;
 import com.micah.liveweather.WeatherHelper;
 import com.micah.liveweather.WeatherUpdateWorker;
 import com.micah.liveweather.services.WeatherQueryAsyncTask;
-import com.micah.liveweather.threading.TaskDelegate;
+import com.micah.liveweather.utils.TaskDelegate;
 
 import java.net.URL;
 import java.util.concurrent.TimeUnit;
@@ -135,14 +134,6 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         homeViewModel =
                 ViewModelProviders.of(this).get(HomeViewModel.class);
         View root = inflater.inflate(R.layout.fragment_home, container, false);
-//        View root = inflater.inflate(R.layout.activity_main, container, false);
-//        final TextView textView = root.findViewById(R.id.text_home);
-//        homeViewModel.getText().observe(getViewLifecycleOwner(), new Observer<String>() {
-//            @Override
-//            public void onChanged(@Nullable String s) {
-//                textView.setText(s);
-//            }
-//        });
 
         mTvMainTemp = root.findViewById(R.id.tvMainTemp);
         mTvUnitTemp = root.findViewById(R.id.tvUnitTemp);
@@ -189,7 +180,6 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         WorkManager.getInstance(mFragmentActivity)
                 .getWorkInfoByIdLiveData(weatherUpdateRequest.getId())
                 .observe(getViewLifecycleOwner(), info -> {
-                    Log.d("HomeFragment", info.getId().toString());
                     if (info != null && info.getState().isFinished()) {
                         String myResult = info.getOutputData().getString("WEATHER_UPDATE_RESULT");
                         Log.d("HomeFragment Result", myResult);
