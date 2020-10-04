@@ -5,10 +5,8 @@ import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -36,6 +34,7 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.preference.PreferenceManager;
+import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
 import androidx.work.Data;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkInfo;
@@ -59,9 +58,17 @@ import java.util.concurrent.TimeUnit;
 
 public class HomeFragment extends Fragment implements TaskDelegate {
 
+    private static class Coord {
+        static double longitude;
+        static double latitude;
+    }
+
+    private static final String TAG = "HomeFragment";
+
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     public static final String WEATHER_NOTIFICATION_CHANNEL = "WEATHER_NOTIFICATION_CHANNEL";
     public static final int WEATHER_NOTIFICATION_ID = 1;
+    public static final String RECENTLY_SEARCHED_LOCATION = "RECENTLY_SEARCHED_LOCATION";
     private HomeViewModel homeViewModel;
     private FragmentActivity mFragmentActivity;
     public static final String OPENWEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
@@ -75,9 +82,63 @@ public class HomeFragment extends Fragment implements TaskDelegate {
 
     private ProgressBar mProgressBar;
 
-    private static class Coord {
-        static double longitude;
-        static double latitude;
+    private SwipeRefreshLayout mSwipeRefreshLayout;
+
+    private String lastSearchedPlace;
+    private Coord lastSearchedCoord;
+
+    private boolean mUserHasSearched = false;
+    private SearchView mSearchView;
+    private SharedPreferences mPref;
+
+    public View onCreateView(@NonNull LayoutInflater inflater,
+                             ViewGroup container, Bundle savedInstanceState) {
+        mFragmentActivity = getActivity();
+        homeViewModel =
+                ViewModelProviders.of(this).get(HomeViewModel.class);
+
+        Button celsiusDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerCelsius);
+        Button fahrDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerFahr);
+        final DrawerLayout drawerLayout = mFragmentActivity.findViewById(R.id.drawer_layout);
+
+        celsiusDrawerBtn.setOnClickListener(listener -> {
+            convertTempToCelsius();
+            drawerLayout.closeDrawers();
+        });
+
+        fahrDrawerBtn.setOnClickListener(listener -> {
+            convertTempToFahr();
+            drawerLayout.closeDrawers();
+        });
+
+        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(mFragmentActivity);
+        setHasOptionsMenu(true);
+
+        PreferenceManager.setDefaultValues(mFragmentActivity, R.xml.general_preferences, false);
+
+        View root = inflater.inflate(R.layout.fragment_home, container, false);
+
+        mTvMainTemp = root.findViewById(R.id.tvMainTemp);
+        mTvUnitTemp = root.findViewById(R.id.tvUnitTemp);
+
+        mSwipeRefreshLayout = root.findViewById(R.id.swipeRefresh);
+        return root;
+    }
+
+    @Override
+    public void onViewCreated(View view, Bundle savedInstanceState) {
+        mSwipeRefreshLayout.setOnRefreshListener(() ->
+                {
+                    String recentlySearchedLocation = mPref.getString(
+                            RECENTLY_SEARCHED_LOCATION, "");
+
+                    if (!recentlySearchedLocation.trim().equals("")) {
+                        displayWeatherInfo(recentlySearchedLocation);
+                    } else {
+                        displayWeatherInfo(Coord.latitude, Coord.longitude);
+                    }
+                }
+        );
     }
 
     @Override
@@ -126,49 +187,23 @@ public class HomeFragment extends Fragment implements TaskDelegate {
 
             mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
             mProgressBar.setVisibility(View.GONE);
-
         } else {
             mProgressBar.setVisibility(View.GONE);
-//            // TODO: Show a toast here or something
             if (mFragmentActivity != null) {
                 Toast.makeText(mFragmentActivity, "There are no weather information for " + mLocationSearchQuery, Toast.LENGTH_SHORT).show();
             }
         }
+
+        onRefreshComplete();
+    }
+
+    private void onRefreshComplete() {
+        mSwipeRefreshLayout.setRefreshing(false);
     }
 
     @Override
     public void onWeatherFetchReqProgress(int progress) {
         mProgressBar.setProgress(progress);
-    }
-
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             ViewGroup container, Bundle savedInstanceState) {
-        mFragmentActivity = getActivity();
-        homeViewModel =
-                ViewModelProviders.of(this).get(HomeViewModel.class);
-        View root = inflater.inflate(R.layout.fragment_home, container, false);
-
-        mTvMainTemp = root.findViewById(R.id.tvMainTemp);
-        mTvUnitTemp = root.findViewById(R.id.tvUnitTemp);
-
-        Button celsiusDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerCelsius);
-        Button fahrDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerFahr);
-        final DrawerLayout drawerLayout = mFragmentActivity.findViewById(R.id.drawer_layout);
-        celsiusDrawerBtn.setOnClickListener(listener -> {
-            convertTempToCelsius();
-            drawerLayout.closeDrawers();
-        });
-
-        fahrDrawerBtn.setOnClickListener(listener -> {
-            convertTempToFahr();
-            drawerLayout.closeDrawers();
-        });
-
-        mFusedLocationClient = LocationServices.getFusedLocationProviderClient(mFragmentActivity);
-        setHasOptionsMenu(true);
-
-        PreferenceManager.setDefaultValues(mFragmentActivity, R.xml.general_preferences, false);
-        return root;
     }
 
     public void startScheduledWork() {
@@ -187,6 +222,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         WorkManager.getInstance(mFragmentActivity)
                 .getWorkInfoByIdLiveData(weatherUpdateRequest.getId())
                 .observe(getViewLifecycleOwner(), info -> {
+                    Log.d("WeatherUpdateThread: ", Thread.currentThread().getName());
                     if (info != null) {
                         final WorkInfo.State infoState = info.getState();
                         Log.d("WorkInfo State", infoState.name());
@@ -221,19 +257,19 @@ public class HomeFragment extends Fragment implements TaskDelegate {
     }
 
     private void createNotificationChannel() {
-            // Create the NotificationChannel, but only on API 26+ because
-            // the NotificationChannel class is new and not in the support library
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                CharSequence name = getString(R.string.notify_channel_name);
-                String description = getString(R.string.notify_channel_description);
-                int importance = NotificationManager.IMPORTANCE_DEFAULT;
-                NotificationChannel channel = new NotificationChannel(WEATHER_NOTIFICATION_CHANNEL, name, importance);
-                channel.setDescription(description);
-                // Register the channel with the system; you can't change the importance
-                // or other notification behaviors after this
-                NotificationManager notificationManager = mFragmentActivity.getSystemService(NotificationManager.class);
-                notificationManager.createNotificationChannel(channel);
-            }
+        // Create the NotificationChannel, but only on API 26+ because
+        // the NotificationChannel class is new and not in the support library
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            CharSequence name = getString(R.string.notify_channel_name);
+            String description = getString(R.string.notify_channel_description);
+            int importance = NotificationManager.IMPORTANCE_DEFAULT;
+            NotificationChannel channel = new NotificationChannel(WEATHER_NOTIFICATION_CHANNEL, name, importance);
+            channel.setDescription(description);
+            // Register the channel with the system; you can't change the importance
+            // or other notification behaviors after this
+            NotificationManager notificationManager = mFragmentActivity.getSystemService(NotificationManager.class);
+            notificationManager.createNotificationChannel(channel);
+        }
     }
 
 
@@ -250,7 +286,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
                     Manifest.permission.ACCESS_FINE_LOCATION
             }, LOCATION_PERMISSION_REQUEST_CODE);
         } else {
-            getUserLocation();
+            getUserLocationAndFetchWeatherData();
         }
         this.createNotificationChannel();
         displayNotification();
@@ -275,19 +311,21 @@ public class HomeFragment extends Fragment implements TaskDelegate {
     public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
         inflater.inflate(R.menu.menu_main, menu);
         MenuItem searchItem = menu.findItem(R.id.app_bar_search);
-        SearchView searchView = (SearchView) searchItem.getActionView();
+        mSearchView = (SearchView) searchItem.getActionView();
 
-//        SearchManager searchManager = (SearchManager) getActivity().getSystemService(Context.SEARCH_SERVICE);
-//        SearchView searchView = (SearchView) searchItem.getActionView();
-//
-//        searchView.setSearchableInfo(searchManager.getSearchableInfo(getActivity().getComponentName()));
+        mSearchView.setQueryHint(getResources().getString(R.string.search_hint));
+        addWeatherSearchListener();
+        super.onCreateOptionsMenu(menu, inflater);
+    }
 
-        searchView.setQueryHint(getResources().getString(R.string.search_hint));
-
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+    void addWeatherSearchListener() {
+        mSearchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 mLocationSearchQuery = query;
+                mUserHasSearched = true;
+                // Last searched location will be used to initiate weather fetch on swipe refresh
+                mPref.edit().putString(RECENTLY_SEARCHED_LOCATION, query.trim()).apply();
                 displayWeatherInfo(query);
                 return true;
             }
@@ -297,7 +335,6 @@ public class HomeFragment extends Fragment implements TaskDelegate {
                 return false;
             }
         });
-        super.onCreateOptionsMenu(menu, inflater);
     }
 
     @Override
@@ -305,7 +342,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED)
-                getUserLocation();
+                getUserLocationAndFetchWeatherData();
         } else {
             mFragmentActivity.finish();
         }
@@ -318,15 +355,15 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         TextView tvNavHeaderUserName = headerView.findViewById(R.id.tvUsername);
         TextView tvNavHeaderUserlocation = headerView.findViewById(R.id.tvUserLocation);
 
-        SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(mFragmentActivity);
-        String userName = pref.getString(getResources().getString(R.string.pref_display_name_key), "");
+        mPref = PreferenceManager.getDefaultSharedPreferences(mFragmentActivity);
+        String userName = mPref.getString(getResources().getString(R.string.pref_display_name_key), "");
 
         tvNavHeaderUserName.setText(userName);
         tvNavHeaderUserlocation.setText("Amsterdam");
     }
 
     @SuppressLint("MissingPermission")
-    public void getUserLocation() {
+    public void getUserLocationAndFetchWeatherData() {
         mFusedLocationClient.getLastLocation()
                 .addOnSuccessListener(mFragmentActivity, location -> {
                     if (location != null) {
@@ -361,6 +398,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
     }
 
     private void displayWeatherInfo(String location) {
+        lastSearchedPlace = location;
         try {
             URL url = WeatherHelper.buildURL(location);
             mFetchWeatherAsyncTask = new WeatherQueryAsyncTask(this).execute(url);
@@ -375,88 +413,6 @@ public class HomeFragment extends Fragment implements TaskDelegate {
             mFetchWeatherAsyncTask = new WeatherQueryAsyncTask(this).execute(url);
         } catch (Exception e) {
             e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) { }
-
-    public class WeatherQueryTask extends AsyncTask<URL, Integer, String> {
-
-        private View mView = getView();
-        private ProgressBar mProgressBar;
-
-        @Override
-        protected void onPreExecute() {
-            mProgressBar = (ProgressBar) mView.findViewById(R.id.wUpdateProgressBar);
-            mProgressBar.setVisibility(View.VISIBLE);
-            mProgressBar.setProgress(1);
-        }
-
-        @Override
-        protected String doInBackground(URL... urls) {
-            URL url = urls[0];
-            String result = null;
-
-            try {
-                publishProgress(2);
-                result = WeatherHelper.getWeatherData(url);
-                publishProgress(3);
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return result;
-        }
-
-        @Override
-        protected void onProgressUpdate(Integer... progress) {
-           int progressValue = progress[0];
-           mProgressBar.setProgress(progressValue);
-        }
-
-        @Override
-        protected void onPostExecute(String result) {
-            if (result != null) {
-                mView = getView();
-                TextView tvMainTemp = mView.findViewById(R.id.tvMainTemp);
-                TextView tvMinTemp = mView.findViewById(R.id.tvNightTemp);
-                TextView tvMaxTemp = mView.findViewById(R.id.tvDayTemp);
-                TextView tvWeatherDescription = mView.findViewById(R.id.tvWeatherText);
-                TextView tvFeelsLikeTemp = mView.findViewById(R.id.tvPerceivedTemp);
-                TextView tvUnitTemp = mView.findViewById(R.id.tvUnitTemp);
-                TextView tvDateTemp = mView.findViewById(R.id.tvDateTime);
-                ImageView ivWeatherImage = mView.findViewById(R.id.ivWeatherImage);
-
-                Weather todayWeather = WeatherHelper.parseWeatherData(result);
-
-                int mainTemp = (int) todayWeather.convertToCelsius('K');
-                int minTemp = (int) todayWeather.convertToCelsius(todayWeather.minTemp, 'K');
-                int maxTemp = (int) todayWeather.convertToCelsius(todayWeather.maxTemp, 'K');
-                int feelsLikeTemp = (int) todayWeather.convertToCelsius(todayWeather.feelsLikeTemp, 'K');
-                String imageUrl = OPENWEATHERMAP_BASE_IMAGE_URL + todayWeather.icon + "@2x.png";
-
-
-                tvMainTemp.setText(String.valueOf(mainTemp));
-                tvMinTemp.setText(String.valueOf(minTemp));
-                tvMaxTemp.setText(String.valueOf(maxTemp));
-                tvWeatherDescription.setText(todayWeather.capitalizeDescription());
-                tvFeelsLikeTemp.setText("Feels like " + String.valueOf(feelsLikeTemp));
-                tvUnitTemp.setText(String.valueOf(Weather.currentUnit));
-
-                todayWeather.setWeatherImage(mFragmentActivity.getApplicationContext(), imageUrl, ivWeatherImage);
-                tvDateTemp.setText(Weather.getWeatherTime());
-
-                mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
-                mProgressBar.setVisibility(View.GONE);
-
-                super.onPostExecute(result);
-            } else {
-                mProgressBar.setVisibility(View.GONE);
-                // TODO: Show a toast here or something
-                if (mFragmentActivity != null) {
-                    Toast.makeText(mFragmentActivity, "There are no weather information for " + mLocationSearchQuery + " at this time", Toast.LENGTH_SHORT).show();
-                }
-            }
         }
     }
 }

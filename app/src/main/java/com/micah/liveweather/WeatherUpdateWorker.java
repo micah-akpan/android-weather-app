@@ -22,6 +22,7 @@ public class WeatherUpdateWorker extends Worker {
     public Result doWork() {
         String weatherString = updateWeather();
         Log.d("WeatherUpdate", weatherString);
+        Log.d("WeatherUpWorkerThread: ", Thread.currentThread().getName());
         return Result.success(
                 new Data.Builder()
                   .putString("WEATHER_UPDATE_RESULT", weatherString)

@@ -53,6 +53,8 @@ dependencies {
 
     implementation "com.android.support:support-compat:28.0.0"
 
+    implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
+
     // Testing Navigation
     androidTestImplementation "androidx.navigation:navigation-testing:$nav_version"
 
