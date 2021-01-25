@@ -11,7 +11,8 @@
         android:roundIcon="@mipmap/ic_launcher_text_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
-        android:usesCleartextTraffic="true">
+        android:usesCleartextTraffic="true"
+        android:name=".WeatherApplication">
         <activity
             android:name=".SettingsActivity"
             android:label="@string/title_activity_settings" />

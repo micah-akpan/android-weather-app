@@ -2,16 +2,10 @@ package com.micah.liveweather.ui.home;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -27,43 +21,39 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
-import androidx.core.app.NotificationManagerCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
-import androidx.lifecycle.ViewModelProviders;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProvider;
 import androidx.preference.PreferenceManager;
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout;
-import androidx.work.Data;
-import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkInfo;
-import androidx.work.WorkManager;
-import androidx.work.WorkRequest;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationServices;
 import com.google.android.material.navigation.NavigationView;
-import com.micah.liveweather.MainActivity;
 import com.micah.liveweather.MathHelper;
 import com.micah.liveweather.R;
 import com.micah.liveweather.Weather;
 import com.micah.liveweather.WeatherHelper;
-import com.micah.liveweather.WeatherUpdateWorker;
 import com.micah.liveweather.services.WeatherQueryAsyncTask;
 import com.micah.liveweather.utils.TaskDelegate;
 
 import java.net.URL;
-import java.util.concurrent.TimeUnit;
+import java.util.List;
+
+import timber.log.Timber;
 
 public class HomeFragment extends Fragment implements TaskDelegate {
+    private boolean mCanShowHourlyNotification = false;
+    private boolean mUserHasSearched;
+    private String lastSearchedPlace;
 
     private static class Coord {
         static double longitude;
         static double latitude;
     }
-
-    private static final String TAG = "HomeFragment";
 
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
     public static final String WEATHER_NOTIFICATION_CHANNEL = "WEATHER_NOTIFICATION_CHANNEL";
@@ -83,19 +73,17 @@ public class HomeFragment extends Fragment implements TaskDelegate {
     private ProgressBar mProgressBar;
 
     private SwipeRefreshLayout mSwipeRefreshLayout;
-
-    private String lastSearchedPlace;
-    private Coord lastSearchedCoord;
-
-    private boolean mUserHasSearched = false;
     private SearchView mSearchView;
     private SharedPreferences mPref;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         mFragmentActivity = getActivity();
+
         homeViewModel =
-                ViewModelProviders.of(this).get(HomeViewModel.class);
+                new ViewModelProvider(this).get(HomeViewModel.class);
+
+        homeViewModel.workInfos.observe(getViewLifecycleOwner(), this.workInfoObserver());
 
         Button celsiusDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerCelsius);
         Button fahrDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerFahr);
@@ -206,72 +194,13 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         mProgressBar.setProgress(progress);
     }
 
-    public void startScheduledWork() {
-        URL url = WeatherHelper.buildURL(Coord.latitude, Coord.longitude);
-        WorkRequest weatherUpdateRequest = new PeriodicWorkRequest
-                .Builder(WeatherUpdateWorker.class, 15, TimeUnit.MINUTES)
-                .setInputData(
-                        new Data.Builder()
-                                .putString("REQUEST_URL", url.toString())
-                                .build()
-                )
-                .build();
-        WorkManager.getInstance(mFragmentActivity).enqueue(weatherUpdateRequest);
-
-        // get result
-        WorkManager.getInstance(mFragmentActivity)
-                .getWorkInfoByIdLiveData(weatherUpdateRequest.getId())
-                .observe(getViewLifecycleOwner(), info -> {
-                    Log.d("WeatherUpdateThread: ", Thread.currentThread().getName());
-                    if (info != null) {
-                        final WorkInfo.State infoState = info.getState();
-                        Log.d("WorkInfo State", infoState.name());
-                        if (infoState == WorkInfo.State.RUNNING) {
-                            String result = info.getOutputData().getString("WEATHER_UPDATE_RESULT");
-                            if (result != null) {
-                                Log.d("HomeFragment Result", result);
-                            }
-
-                        }
-                    }
-                });
+    public Observer<List<WorkInfo>> workInfoObserver() {
+       return listLiveData -> {
+               if (listLiveData != null) {
+                   Timber.d(String.valueOf(listLiveData.size()));
+               }
+       };
     }
-
-    public void displayNotification() {
-        // Create an explicit intent for an Activity in your app
-        Intent intent = new Intent(mFragmentActivity, MainActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-        PendingIntent pendingIntent = PendingIntent.getActivity(mFragmentActivity, 0, intent, 0);
-
-        NotificationCompat.Builder builder = new NotificationCompat.Builder(mFragmentActivity, WEATHER_NOTIFICATION_CHANNEL)
-                .setSmallIcon(R.drawable.ic_cloud)
-                .setContentTitle("Weather Notification")
-                .setContentText("Weather update")
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
-                .setContentIntent(pendingIntent)
-                .setAutoCancel(true);
-
-        NotificationManagerCompat notificationManager = NotificationManagerCompat.from(mFragmentActivity);
-        notificationManager.notify(WEATHER_NOTIFICATION_ID, builder.build());
-
-    }
-
-    private void createNotificationChannel() {
-        // Create the NotificationChannel, but only on API 26+ because
-        // the NotificationChannel class is new and not in the support library
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            CharSequence name = getString(R.string.notify_channel_name);
-            String description = getString(R.string.notify_channel_description);
-            int importance = NotificationManager.IMPORTANCE_DEFAULT;
-            NotificationChannel channel = new NotificationChannel(WEATHER_NOTIFICATION_CHANNEL, name, importance);
-            channel.setDescription(description);
-            // Register the channel with the system; you can't change the importance
-            // or other notification behaviors after this
-            NotificationManager notificationManager = mFragmentActivity.getSystemService(NotificationManager.class);
-            notificationManager.createNotificationChannel(channel);
-        }
-    }
-
 
     public boolean userHasPermission() {
         return ActivityCompat.checkSelfPermission(mFragmentActivity,
@@ -288,15 +217,16 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         } else {
             getUserLocationAndFetchWeatherData();
         }
-        this.createNotificationChannel();
-        displayNotification();
-        this.updateNavHeaderInfo();
+        updateNavHeaderInfo();
     }
 
     @Override
     public void onPause() {
         super.onPause();
-        startScheduledWork();
+        Timber.d(userHasPermission() ? "Yes" : "No");
+        if (userHasPermission()) {
+           homeViewModel.scheduleWeatherUpdate(Coord.latitude, Coord.longitude);
+        }
     }
 
     @Override
@@ -327,6 +257,10 @@ public class HomeFragment extends Fragment implements TaskDelegate {
                 // Last searched location will be used to initiate weather fetch on swipe refresh
                 mPref.edit().putString(RECENTLY_SEARCHED_LOCATION, query.trim()).apply();
                 displayWeatherInfo(query);
+
+                // TODO: Replace this with a listener
+                // Update details of the nav header when search completes
+                updateNavHeaderInfo();
                 return true;
             }
 
@@ -358,8 +292,11 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         mPref = PreferenceManager.getDefaultSharedPreferences(mFragmentActivity);
         String userName = mPref.getString(getResources().getString(R.string.pref_display_name_key), "");
 
+        String recentlySearchedLocation = mPref.getString(
+                RECENTLY_SEARCHED_LOCATION, "");
+
         tvNavHeaderUserName.setText(userName);
-        tvNavHeaderUserlocation.setText("Amsterdam");
+        tvNavHeaderUserlocation.setText(recentlySearchedLocation);
     }
 
     @SuppressLint("MissingPermission")
