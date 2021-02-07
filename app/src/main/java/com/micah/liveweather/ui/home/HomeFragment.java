@@ -234,10 +234,14 @@ public class HomeFragment extends Fragment implements TaskDelegate {
 
     @Override
     public void onPause() {
-        Timber.d(userHasPermission() ? "Yes" : "No");
-        if (userHasPermission()) {
-           homeViewModel.scheduleWeatherUpdate(Coord.latitude, Coord.longitude);
+        boolean canDisplayWeatherNotification =
+                mPref.getBoolean(mResources.getString(R.string.pref_notification_enable_key), false);
+
+        if (userHasPermission() && canDisplayWeatherNotification
+                && !homeViewModel.isPWeatherUpdateScheduled) {
+            homeViewModel.scheduleWeatherUpdate(Coord.latitude, Coord.longitude);
         }
+
         super.onPause();
     }
 

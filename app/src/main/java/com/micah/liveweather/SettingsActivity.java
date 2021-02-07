@@ -27,12 +27,9 @@ public class SettingsActivity extends AppCompatActivity implements
             setTitle(savedInstanceState.getCharSequence(TITLE_TAG));
         }
         getSupportFragmentManager().addOnBackStackChangedListener(
-                new FragmentManager.OnBackStackChangedListener() {
-                    @Override
-                    public void onBackStackChanged() {
-                        if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
-                            setTitle(R.string.title_activity_settings);
-                        }
+                () -> {
+                    if (getSupportFragmentManager().getBackStackEntryCount() == 0) {
+                        setTitle(R.string.title_activity_settings);
                     }
                 });
         ActionBar actionBar = getSupportActionBar();

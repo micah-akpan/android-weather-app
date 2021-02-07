@@ -27,6 +27,7 @@ public class HomeViewModel extends AndroidViewModel {
     public final LiveData<List<WorkInfo>> workInfos;
     public final double LAGOS_LATITUDE = 6.5801382;
     public final double LAGOS_LONGITUDE = 3.3415503;
+    public boolean isPWeatherUpdateScheduled = false;
 
     public HomeViewModel(Application application) {
         super(application);
@@ -37,6 +38,7 @@ public class HomeViewModel extends AndroidViewModel {
     }
 
     public WorkRequest createWeatherUpdateWorker(Data.Builder inputData) {
+        this.isPWeatherUpdateScheduled = true;
         Constraints constraints = new Constraints.Builder()
                 .setRequiresDeviceIdle(true)
                 .setRequiresBatteryNotLow(true)
