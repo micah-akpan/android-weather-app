@@ -25,6 +25,8 @@ public class HomeViewModel extends AndroidViewModel {
     private MutableLiveData<String> mText;
     private final WorkManager workManager;
     public final LiveData<List<WorkInfo>> workInfos;
+    public final double LAGOS_LATITUDE = 6.5801382;
+    public final double LAGOS_LONGITUDE = 3.3415503;
 
     public HomeViewModel(Application application) {
         super(application);

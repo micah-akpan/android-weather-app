@@ -4,6 +4,7 @@ import android.Manifest;
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -40,15 +41,20 @@ import com.micah.liveweather.WeatherHelper;
 import com.micah.liveweather.services.WeatherQueryAsyncTask;
 import com.micah.liveweather.utils.TaskDelegate;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.net.URL;
 import java.util.List;
 
 import timber.log.Timber;
 
 public class HomeFragment extends Fragment implements TaskDelegate {
+    public static final double LAGOS_LATITUDE = 6.5801382;
+    public static final double LAGOS_LONGITUDE = 3.3415503;
     private boolean mCanShowHourlyNotification = false;
     private boolean mUserHasSearched;
     private String lastSearchedPlace;
+    private Resources mResources;
 
     private static class Coord {
         static double longitude;
@@ -108,18 +114,21 @@ public class HomeFragment extends Fragment implements TaskDelegate {
 
         mTvMainTemp = root.findViewById(R.id.tvMainTemp);
         mTvUnitTemp = root.findViewById(R.id.tvUnitTemp);
-
         mSwipeRefreshLayout = root.findViewById(R.id.swipeRefresh);
+
+        mResources = getResources();
+
         return root;
     }
 
     @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
+    public void onViewCreated(@NotNull View view, Bundle savedInstanceState) {
         mSwipeRefreshLayout.setOnRefreshListener(() ->
                 {
                     String recentlySearchedLocation = mPref.getString(
                             RECENTLY_SEARCHED_LOCATION, "");
 
+                    assert recentlySearchedLocation != null;
                     if (!recentlySearchedLocation.trim().equals("")) {
                         displayWeatherInfo(recentlySearchedLocation);
                     } else {
@@ -137,6 +146,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
     @Override
     public void onWeatherPreFetchReq(int initialProgress) {
         View view = getView();
+        assert view != null;
         mProgressBar = view.findViewById(R.id.wUpdateProgressBar);
         mProgressBar.setVisibility(View.VISIBLE);
         mProgressBar.setProgress(1);
@@ -146,6 +156,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
     public void onWeatherPostFetchReq(String result) {
         if (result != null) {
             View mView = getView();
+            assert mView != null;
             TextView tvMainTemp = mView.findViewById(R.id.tvMainTemp);
             TextView tvMinTemp = mView.findViewById(R.id.tvNightTemp);
             TextView tvMaxTemp = mView.findViewById(R.id.tvDayTemp);
@@ -167,7 +178,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
             tvMinTemp.setText(String.valueOf(minTemp));
             tvMaxTemp.setText(String.valueOf(maxTemp));
             tvWeatherDescription.setText(todayWeather.capitalizeDescription());
-            tvFeelsLikeTemp.setText("Feels like " + String.valueOf(feelsLikeTemp));
+            tvFeelsLikeTemp.setText(mResources.getString(R.string.weather_feels_like, feelsLikeTemp));
             tvUnitTemp.setText(String.valueOf(Weather.currentUnit));
 
             todayWeather.setWeatherImage(mFragmentActivity.getApplicationContext(), imageUrl, ivWeatherImage);
@@ -178,7 +189,8 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         } else {
             mProgressBar.setVisibility(View.GONE);
             if (mFragmentActivity != null) {
-                Toast.makeText(mFragmentActivity, "There are no weather information for " + mLocationSearchQuery, Toast.LENGTH_SHORT).show();
+                Toast.makeText(mFragmentActivity, "There are no weather information for " + mLocationSearchQuery, Toast.LENGTH_SHORT)
+                        .show();
             }
         }
 
@@ -222,30 +234,30 @@ public class HomeFragment extends Fragment implements TaskDelegate {
 
     @Override
     public void onPause() {
-        super.onPause();
         Timber.d(userHasPermission() ? "Yes" : "No");
         if (userHasPermission()) {
            homeViewModel.scheduleWeatherUpdate(Coord.latitude, Coord.longitude);
         }
+        super.onPause();
     }
 
     @Override
     public void onStop() {
-        super.onStop();
         if (this.mFetchWeatherAsyncTask != null) {
             this.mFetchWeatherAsyncTask.cancel(true);
         }
+        super.onStop();
     }
 
     @Override
     public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
         inflater.inflate(R.menu.menu_main, menu);
         MenuItem searchItem = menu.findItem(R.id.app_bar_search);
         mSearchView = (SearchView) searchItem.getActionView();
 
-        mSearchView.setQueryHint(getResources().getString(R.string.search_hint));
+        mSearchView.setQueryHint(mResources.getString(R.string.search_hint));
         addWeatherSearchListener();
-        super.onCreateOptionsMenu(menu, inflater);
     }
 
     void addWeatherSearchListener() {
@@ -255,7 +267,8 @@ public class HomeFragment extends Fragment implements TaskDelegate {
                 mLocationSearchQuery = query;
                 mUserHasSearched = true;
                 // Last searched location will be used to initiate weather fetch on swipe refresh
-                mPref.edit().putString(RECENTLY_SEARCHED_LOCATION, query.trim()).apply();
+                SharedPreferences.Editor sharedPrefEditor = mPref.edit();
+                sharedPrefEditor.putString(RECENTLY_SEARCHED_LOCATION, query.trim()).apply();
                 displayWeatherInfo(query);
 
                 // TODO: Replace this with a listener
@@ -290,10 +303,8 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         TextView tvNavHeaderUserlocation = headerView.findViewById(R.id.tvUserLocation);
 
         mPref = PreferenceManager.getDefaultSharedPreferences(mFragmentActivity);
-        String userName = mPref.getString(getResources().getString(R.string.pref_display_name_key), "");
-
-        String recentlySearchedLocation = mPref.getString(
-                RECENTLY_SEARCHED_LOCATION, "");
+        String userName = mPref.getString(mResources.getString(R.string.pref_display_name_key), "");
+        String recentlySearchedLocation = mPref.getString(RECENTLY_SEARCHED_LOCATION, "");
 
         tvNavHeaderUserName.setText(userName);
         tvNavHeaderUserlocation.setText(recentlySearchedLocation);
@@ -307,8 +318,8 @@ public class HomeFragment extends Fragment implements TaskDelegate {
                         Coord.latitude = location.getLatitude();
                         Coord.longitude = location.getLongitude();
                     } else {
-                        Coord.latitude = 6.5801382;
-                        Coord.longitude = 3.3415503;
+                        Coord.latitude = homeViewModel.LAGOS_LATITUDE;
+                        Coord.longitude = homeViewModel.LAGOS_LONGITUDE;
                     }
                     displayWeatherInfo(Coord.latitude, Coord.longitude);
                 });

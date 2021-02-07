@@ -47,4 +47,5 @@
     <string name="notify_channel_name">lw_notification_channel</string>
     <string name="notify_channel_description">lw_notification_channel_desc</string>
     <string name="weather_update_title">There was a weather update while you were away</string>
+    <string name="weather_feels_like">Feels like %d</string>
 </resources>
