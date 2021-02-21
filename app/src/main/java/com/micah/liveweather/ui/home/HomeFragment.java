@@ -91,9 +91,18 @@ public class HomeFragment extends Fragment {
                 new ViewModelProvider(this).get(HomeViewModel.class);
 
         viewModel.workInfos.observe(getViewLifecycleOwner(), this.workInfoObserver());
-        viewModel.getWeatherData().observe(getViewLifecycleOwner(), it -> {
-            Timber.i("Weather data is: %s", it);
-            displayWeather(it);
+        viewModel.getWeatherData().observe(getViewLifecycleOwner(), weatherData -> {
+            Timber.i("Weather data is: %s", weatherData);
+            displayWeather(weatherData);
+        });
+
+        viewModel.getWeatherFetchProgress().observe(getViewLifecycleOwner(), progress -> {
+            Timber.i("Progress value is: %d", progress);
+            if (progress == 3) {
+                mFragmentHomeBinding.wUpdateProgressBar.setVisibility(View.GONE);
+            } else {
+                displayWeatherFetchProgress(progress);
+            }
         });
 
         mFragmentHomeBinding = FragmentHomeBinding.inflate(inflater, container, false);
@@ -143,11 +152,6 @@ public class HomeFragment extends Fragment {
         );
     }
 
-//    @Override
-//    public Weather onWeatherFetchSuccess() {
-//        return null;
-//    }
-
 
 //    public void onWeatherPreFetchReq(int initialProgress) {
 //        View view = getView();
@@ -156,6 +160,12 @@ public class HomeFragment extends Fragment {
 //        mProgressBar.setVisibility(View.VISIBLE);
 //        mProgressBar.setProgress(1);
 //    }
+
+    public void displayWeatherFetchProgress(int progress) {
+        mProgressBar = mFragmentHomeBinding.wUpdateProgressBar;
+        mProgressBar.setVisibility(View.VISIBLE);
+        mProgressBar.setProgress(progress);
+    }
 
     public void displayWeather(String result) {
         if (result != null) {
@@ -189,9 +199,8 @@ public class HomeFragment extends Fragment {
             tvDateTemp.setText(Weather.getWeatherTime());
 
             mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
-//            mProgressBar.setVisibility(View.GONE);
         } else {
-//            mProgressBar.setVisibility(View.GONE);
+            mFragmentHomeBinding.wUpdateProgressBar.setVisibility(View.GONE);
             if (mFragmentActivity != null) {
                 Toast.makeText(
                         mFragmentActivity,
@@ -208,15 +217,10 @@ public class HomeFragment extends Fragment {
         mSwipeRefreshLayout.setRefreshing(false);
     }
 
-//    @Override
-//    public void onWeatherFetchReqProgress(int progress) {
-//        mProgressBar.setProgress(progress);
-//    }
-
     public Observer<List<WorkInfo>> workInfoObserver() {
        return listLiveData -> {
                if (listLiveData != null) {
-                   Timber.d(String.valueOf(listLiveData.size()));
+//                   Timber.d(String.valueOf(listLiveData.size()));
                }
        };
     }

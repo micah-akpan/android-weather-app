@@ -34,7 +34,8 @@ public class HomeViewModel extends AndroidViewModel {
     public boolean isPWeatherUpdateScheduled = false;
     private final LiveData<String> mWeatherData;
 
-//    MutableLiveData<String> mWeatherData = new MutableLiveData<>();
+    private final MutableLiveData<Integer> mWeatherFetchProgress;
+
     WeatherRepository mWeatherRepository;
 
     public HomeViewModel(Application application) {
@@ -43,6 +44,7 @@ public class HomeViewModel extends AndroidViewModel {
         workInfos = workManager.getWorkInfosByTagLiveData(Constants.WEATHER_UPDATE_WORKER_TAG);
         mWeatherRepository = new WeatherRepository();
         mWeatherData = mWeatherRepository.getWeatherData();
+        mWeatherFetchProgress = mWeatherRepository.getWeatherFetchProgress();
     }
 
     public WorkRequest createWeatherUpdateWorker(Data.Builder inputData) {
@@ -111,5 +113,9 @@ public class HomeViewModel extends AndroidViewModel {
 
     public LiveData<String> getWeatherData() {
         return mWeatherData;
+    }
+
+    public MutableLiveData<Integer> getWeatherFetchProgress() {
+        return mWeatherFetchProgress;
     }
 }

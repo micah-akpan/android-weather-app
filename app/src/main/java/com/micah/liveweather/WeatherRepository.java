@@ -106,19 +106,19 @@ public class WeatherRepository {
         return mWeatherQueryAsyncTask.mWeatherData;
     }
 
+    public MutableLiveData<Integer> getWeatherFetchProgress() {
+        return getWeatherQueryAsyncTask().getWeatherFetchProgress();
+    }
+
 
     public static class WeatherQueryAsyncTask extends AsyncTask<URL, Integer, String> {
-        private int weatherFetchProgress = 0;
+        private final MutableLiveData<Integer> mWeatherFetchProgress;
         private final MutableLiveData<String> mWeatherData;
 
         public WeatherQueryAsyncTask() {
             super();
             mWeatherData = new MutableLiveData<>();
-        }
-
-        @Override
-        protected void onPreExecute() {
-
+            mWeatherFetchProgress = new MutableLiveData<>();
         }
 
         @Override
@@ -138,7 +138,7 @@ public class WeatherRepository {
 
         @Override
         protected void onProgressUpdate(Integer... progress) {
-            weatherFetchProgress = progress[0];
+            mWeatherFetchProgress.setValue(progress[0]);
         }
 
         @Override
@@ -147,8 +147,8 @@ public class WeatherRepository {
             mWeatherData.setValue(result);
         }
 
-        public int getWeatherFetchProgress() {
-            return weatherFetchProgress;
+        public MutableLiveData<Integer> getWeatherFetchProgress() {
+            return mWeatherFetchProgress;
         }
     }
 }
