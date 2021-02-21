@@ -12,6 +12,7 @@ import timber.log.Timber;
 
 public class WeatherUpdateWorker extends Worker {
 
+    private WeatherRepository mWeatherRepository;
     private final Context mApplicationContext;
 
     public WeatherUpdateWorker(
@@ -19,6 +20,7 @@ public class WeatherUpdateWorker extends Worker {
             @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
         mApplicationContext = context;
+        mWeatherRepository = new WeatherRepository();
     }
 
     @NonNull
@@ -26,8 +28,7 @@ public class WeatherUpdateWorker extends Worker {
     public Result doWork() {
         try {
             URL url = new URL(getInputData().getString(Constants.REQUEST_URL));
-            String weatherData = WeatherHelper.getWeatherData(url);
-            Timber.d(weatherData);
+            String weatherData = mWeatherRepository.getWeatherData(url);
             WorkerUtils.displayNotification(mApplicationContext.getString(R.string.weather_update_title), mApplicationContext);
             return Result.success(new Data.Builder().putString(Constants.WEATHER_UPDATE_RESULT, weatherData).build());
         } catch (Exception error) {

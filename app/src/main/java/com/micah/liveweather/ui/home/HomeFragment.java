@@ -7,6 +7,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -37,7 +38,9 @@ import com.google.android.material.navigation.NavigationView;
 import com.micah.liveweather.MathHelper;
 import com.micah.liveweather.R;
 import com.micah.liveweather.Weather;
-import com.micah.liveweather.WeatherHelper;
+import com.micah.liveweather.WeatherRepository;
+import com.micah.liveweather.databinding.ActivityMainBinding;
+import com.micah.liveweather.databinding.FragmentHomeBinding;
 import com.micah.liveweather.services.WeatherQueryAsyncTask;
 import com.micah.liveweather.utils.TaskDelegate;
 
@@ -45,29 +48,18 @@ import org.jetbrains.annotations.NotNull;
 
 import java.net.URL;
 import java.util.List;
-
 import timber.log.Timber;
 
 public class HomeFragment extends Fragment implements TaskDelegate {
-    public static final double LAGOS_LATITUDE = 6.5801382;
-    public static final double LAGOS_LONGITUDE = 3.3415503;
     private boolean mCanShowHourlyNotification = false;
     private boolean mUserHasSearched;
     private String lastSearchedPlace;
     private Resources mResources;
 
-    private static class Coord {
-        static double longitude;
-        static double latitude;
-    }
-
     private static final int LOCATION_PERMISSION_REQUEST_CODE = 1;
-    public static final String WEATHER_NOTIFICATION_CHANNEL = "WEATHER_NOTIFICATION_CHANNEL";
-    public static final int WEATHER_NOTIFICATION_ID = 1;
     public static final String RECENTLY_SEARCHED_LOCATION = "RECENTLY_SEARCHED_LOCATION";
-    private HomeViewModel homeViewModel;
     private FragmentActivity mFragmentActivity;
-    public static final String OPENWEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
+    public static final String OPEN_WEATHERMAP_BASE_IMAGE_URL = "http://openweathermap.org/img/wn/";
     TextView mTvMainTemp;
 
     double mWeatherTemp = 0;
@@ -82,18 +74,32 @@ public class HomeFragment extends Fragment implements TaskDelegate {
     private SearchView mSearchView;
     private SharedPreferences mPref;
 
+    private HomeViewModel viewModel;
+    private HomeViewModelFactory viewModelFactory;
+
+    private FragmentHomeBinding mFragmentHomeBinding;
+
+    private static class Coord {
+        static double longitude;
+        static double latitude;
+    }
+
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
         mFragmentActivity = getActivity();
 
-        homeViewModel =
-                new ViewModelProvider(this).get(HomeViewModel.class);
+        viewModelFactory = new HomeViewModelFactory(new WeatherRepository());
+        viewModel =
+                new ViewModelProvider(this, viewModelFactory).get(HomeViewModel.class);
 
-        homeViewModel.workInfos.observe(getViewLifecycleOwner(), this.workInfoObserver());
+        viewModel.workInfos.observe(getViewLifecycleOwner(), this.workInfoObserver());
+        viewModel.mWeatherData.observe(getViewLifecycleOwner(), s -> Timber.i(s));
+
+        mFragmentHomeBinding = FragmentHomeBinding.inflate(inflater, container, false);
 
         Button celsiusDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerCelsius);
         Button fahrDrawerBtn = mFragmentActivity.findViewById(R.id.tvDrawerFahr);
-        final DrawerLayout drawerLayout = mFragmentActivity.findViewById(R.id.drawer_layout);
+        final DrawerLayout drawerLayout = mFragmentActivity.findViewById(R.id.drawer_layout);;
 
         celsiusDrawerBtn.setOnClickListener(listener -> {
             convertTempToCelsius();
@@ -105,18 +111,16 @@ public class HomeFragment extends Fragment implements TaskDelegate {
             drawerLayout.closeDrawers();
         });
 
+        mTvMainTemp = mFragmentHomeBinding.tvMainTemp;
+        mTvUnitTemp = mFragmentHomeBinding.tvUnitTemp;
+        mSwipeRefreshLayout = mFragmentHomeBinding.swipeRefresh;
+
+        View root = mFragmentHomeBinding.getRoot();
         mFusedLocationClient = LocationServices.getFusedLocationProviderClient(mFragmentActivity);
         setHasOptionsMenu(true);
 
-        PreferenceManager.setDefaultValues(mFragmentActivity, R.xml.general_preferences, false);
-
-        View root = inflater.inflate(R.layout.fragment_home, container, false);
-
-        mTvMainTemp = root.findViewById(R.id.tvMainTemp);
-        mTvUnitTemp = root.findViewById(R.id.tvUnitTemp);
-        mSwipeRefreshLayout = root.findViewById(R.id.swipeRefresh);
-
         mResources = getResources();
+        PreferenceManager.setDefaultValues(mFragmentActivity, R.xml.general_preferences, false);
 
         return root;
     }
@@ -166,13 +170,13 @@ public class HomeFragment extends Fragment implements TaskDelegate {
             TextView tvDateTemp = mView.findViewById(R.id.tvDateTime);
             ImageView ivWeatherImage = mView.findViewById(R.id.ivWeatherImage);
 
-            Weather todayWeather = WeatherHelper.parseWeatherData(result);
+            Weather todayWeather = viewModel.parseWeatherData(result);
 
             int mainTemp = (int) todayWeather.convertToCelsius('K');
             int minTemp = (int) todayWeather.convertToCelsius(todayWeather.minTemp, 'K');
             int maxTemp = (int) todayWeather.convertToCelsius(todayWeather.maxTemp, 'K');
             int feelsLikeTemp = (int) todayWeather.convertToCelsius(todayWeather.feelsLikeTemp, 'K');
-            String imageUrl = OPENWEATHERMAP_BASE_IMAGE_URL + todayWeather.icon + "@2x.png";
+            String imageUrl = OPEN_WEATHERMAP_BASE_IMAGE_URL + todayWeather.icon + "@2x.png";
 
             tvMainTemp.setText(String.valueOf(mainTemp));
             tvMinTemp.setText(String.valueOf(minTemp));
@@ -238,8 +242,8 @@ public class HomeFragment extends Fragment implements TaskDelegate {
                 mPref.getBoolean(mResources.getString(R.string.pref_notification_enable_key), false);
 
         if (userHasPermission() && canDisplayWeatherNotification
-                && !homeViewModel.isPWeatherUpdateScheduled) {
-            homeViewModel.scheduleWeatherUpdate(Coord.latitude, Coord.longitude);
+                && !viewModel.isPWeatherUpdateScheduled) {
+            viewModel.scheduleWeatherUpdate(Coord.latitude, Coord.longitude);
         }
 
         super.onPause();
@@ -322,8 +326,8 @@ public class HomeFragment extends Fragment implements TaskDelegate {
                         Coord.latitude = location.getLatitude();
                         Coord.longitude = location.getLongitude();
                     } else {
-                        Coord.latitude = homeViewModel.LAGOS_LATITUDE;
-                        Coord.longitude = homeViewModel.LAGOS_LONGITUDE;
+                        Coord.latitude = viewModel.LAGOS_NG_LATITUDE;
+                        Coord.longitude = viewModel.LAGOS_NG_LONGITUDE;
                     }
                     displayWeatherInfo(Coord.latitude, Coord.longitude);
                 });
@@ -352,7 +356,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
     private void displayWeatherInfo(String location) {
         lastSearchedPlace = location;
         try {
-            URL url = WeatherHelper.buildURL(location);
+            URL url = WeatherRepository.buildURL(location);
             mFetchWeatherAsyncTask = new WeatherQueryAsyncTask(this).execute(url);
         } catch (Exception e) {
             e.printStackTrace();
@@ -361,7 +365,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
 
     private void displayWeatherInfo(double lat, double lon) {
         try {
-            URL url = WeatherHelper.buildURL(lat, lon);
+            URL url = WeatherRepository.buildURL(lat, lon);
             mFetchWeatherAsyncTask = new WeatherQueryAsyncTask(this).execute(url);
         } catch (Exception e) {
             e.printStackTrace();

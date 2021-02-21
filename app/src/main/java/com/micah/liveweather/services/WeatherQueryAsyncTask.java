@@ -2,7 +2,7 @@ package com.micah.liveweather.services;
 
 import android.os.AsyncTask;
 
-import com.micah.liveweather.WeatherHelper;
+import com.micah.liveweather.WeatherRepository;
 import com.micah.liveweather.utils.TaskDelegate;
 
 import java.lang.ref.WeakReference;
@@ -10,10 +10,12 @@ import java.net.URL;
 
 public class WeatherQueryAsyncTask extends AsyncTask<URL, Integer, String> {
     private WeakReference<TaskDelegate> mDelegate;
+    private WeakReference<WeatherRepository> mWeatherRepository;
 
     public WeatherQueryAsyncTask(TaskDelegate delegate) {
         super();
         mDelegate = new WeakReference(delegate);
+        mWeatherRepository = new WeakReference(new WeatherRepository());
     }
 
     @Override
@@ -28,7 +30,7 @@ public class WeatherQueryAsyncTask extends AsyncTask<URL, Integer, String> {
 
         try {
             publishProgress(2);
-            result = WeatherHelper.getWeatherData(url);
+            result = mWeatherRepository.get().getWeatherData(url);
             publishProgress(3);
         } catch (Exception e) {
             e.printStackTrace();
