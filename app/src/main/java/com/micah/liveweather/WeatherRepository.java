@@ -1,13 +1,20 @@
 package com.micah.liveweather;
 import android.net.Uri;
+import android.os.AsyncTask;
 
 import androidx.annotation.NonNull;
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
+
+import com.micah.liveweather.utils.TaskDelegate;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -19,6 +26,7 @@ public class WeatherRepository {
     public static final String API_KEY = "f4b7c212a14a8efd5a0f08e9cf50a192";
     public static final String API_LOCATION_TEXT_KEY = "q";
     public static URL WEATHER_REQUEST_URL;
+    private static WeatherQueryAsyncTask mWeatherQueryAsyncTask;
 
     public static URL buildURL(String location) {
         URL url = null;
@@ -51,7 +59,7 @@ public class WeatherRepository {
         return url;
     }
 
-    public String getWeatherData(@NonNull URL url) {
+    public static String getWeatherData(@NonNull URL url) {
         HttpURLConnection connection = null;
 
         try {
@@ -78,7 +86,69 @@ public class WeatherRepository {
         return null;
     }
 
-    static void setWeatherRequestUrl(URL url) {
+    public static void setWeatherRequestUrl(URL url) {
         WEATHER_REQUEST_URL = url;
+    }
+
+    public static WeatherQueryAsyncTask getWeatherQueryAsyncTask() {
+        if (mWeatherQueryAsyncTask == null) {
+            mWeatherQueryAsyncTask = new WeatherQueryAsyncTask();
+        }
+        return mWeatherQueryAsyncTask;
+    }
+
+    public void fetchWeatherData(URL url) {
+        getWeatherQueryAsyncTask().execute(url);
+    }
+
+    public LiveData<String> getWeatherData() {
+        mWeatherQueryAsyncTask = getWeatherQueryAsyncTask();
+        return mWeatherQueryAsyncTask.mWeatherData;
+    }
+
+
+    public static class WeatherQueryAsyncTask extends AsyncTask<URL, Integer, String> {
+        private int weatherFetchProgress = 0;
+        private final MutableLiveData<String> mWeatherData;
+
+        public WeatherQueryAsyncTask() {
+            super();
+            mWeatherData = new MutableLiveData<>();
+        }
+
+        @Override
+        protected void onPreExecute() {
+
+        }
+
+        @Override
+        protected String doInBackground(URL... urls) {
+            URL url = urls[0];
+            String result = null;
+
+            try {
+                publishProgress(2);
+                result = getWeatherData(url);
+                publishProgress(3);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return result;
+        }
+
+        @Override
+        protected void onProgressUpdate(Integer... progress) {
+            weatherFetchProgress = progress[0];
+        }
+
+        @Override
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            mWeatherData.setValue(result);
+        }
+
+        public int getWeatherFetchProgress() {
+            return weatherFetchProgress;
+        }
     }
 }

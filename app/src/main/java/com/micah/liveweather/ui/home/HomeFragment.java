@@ -50,7 +50,7 @@ import java.net.URL;
 import java.util.List;
 import timber.log.Timber;
 
-public class HomeFragment extends Fragment implements TaskDelegate {
+public class HomeFragment extends Fragment {
     private boolean mCanShowHourlyNotification = false;
     private boolean mUserHasSearched;
     private String lastSearchedPlace;
@@ -75,7 +75,6 @@ public class HomeFragment extends Fragment implements TaskDelegate {
     private SharedPreferences mPref;
 
     private HomeViewModel viewModel;
-    private HomeViewModelFactory viewModelFactory;
 
     private FragmentHomeBinding mFragmentHomeBinding;
 
@@ -88,12 +87,14 @@ public class HomeFragment extends Fragment implements TaskDelegate {
                              ViewGroup container, Bundle savedInstanceState) {
         mFragmentActivity = getActivity();
 
-        viewModelFactory = new HomeViewModelFactory(new WeatherRepository());
         viewModel =
-                new ViewModelProvider(this, viewModelFactory).get(HomeViewModel.class);
+                new ViewModelProvider(this).get(HomeViewModel.class);
 
         viewModel.workInfos.observe(getViewLifecycleOwner(), this.workInfoObserver());
-        viewModel.mWeatherData.observe(getViewLifecycleOwner(), s -> Timber.i(s));
+        viewModel.getWeatherData().observe(getViewLifecycleOwner(), it -> {
+            Timber.i("Weather data is: %s", it);
+            displayWeather(it);
+        });
 
         mFragmentHomeBinding = FragmentHomeBinding.inflate(inflater, container, false);
 
@@ -134,30 +135,29 @@ public class HomeFragment extends Fragment implements TaskDelegate {
 
                     assert recentlySearchedLocation != null;
                     if (!recentlySearchedLocation.trim().equals("")) {
-                        displayWeatherInfo(recentlySearchedLocation);
+                        fetchWeather(recentlySearchedLocation);
                     } else {
-                        displayWeatherInfo(Coord.latitude, Coord.longitude);
+                        fetchWeather(Coord.latitude, Coord.longitude);
                     }
                 }
         );
     }
 
-    @Override
-    public Weather onWeatherFetchSuccess() {
-        return null;
-    }
+//    @Override
+//    public Weather onWeatherFetchSuccess() {
+//        return null;
+//    }
 
-    @Override
-    public void onWeatherPreFetchReq(int initialProgress) {
-        View view = getView();
-        assert view != null;
-        mProgressBar = view.findViewById(R.id.wUpdateProgressBar);
-        mProgressBar.setVisibility(View.VISIBLE);
-        mProgressBar.setProgress(1);
-    }
 
-    @Override
-    public void onWeatherPostFetchReq(String result) {
+//    public void onWeatherPreFetchReq(int initialProgress) {
+//        View view = getView();
+//        assert view != null;
+//        mProgressBar = view.findViewById(R.id.wUpdateProgressBar);
+//        mProgressBar.setVisibility(View.VISIBLE);
+//        mProgressBar.setProgress(1);
+//    }
+
+    public void displayWeather(String result) {
         if (result != null) {
             View mView = getView();
             assert mView != null;
@@ -189,12 +189,15 @@ public class HomeFragment extends Fragment implements TaskDelegate {
             tvDateTemp.setText(Weather.getWeatherTime());
 
             mWeatherTemp = Double.parseDouble(String.valueOf(mainTemp));
-            mProgressBar.setVisibility(View.GONE);
+//            mProgressBar.setVisibility(View.GONE);
         } else {
-            mProgressBar.setVisibility(View.GONE);
+//            mProgressBar.setVisibility(View.GONE);
             if (mFragmentActivity != null) {
-                Toast.makeText(mFragmentActivity, "There are no weather information for " + mLocationSearchQuery, Toast.LENGTH_SHORT)
-                        .show();
+                Toast.makeText(
+                        mFragmentActivity,
+                        "There are no weather information for " + mLocationSearchQuery,
+                        Toast.LENGTH_LONG
+                ).show();
             }
         }
 
@@ -205,10 +208,10 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         mSwipeRefreshLayout.setRefreshing(false);
     }
 
-    @Override
-    public void onWeatherFetchReqProgress(int progress) {
-        mProgressBar.setProgress(progress);
-    }
+//    @Override
+//    public void onWeatherFetchReqProgress(int progress) {
+//        mProgressBar.setProgress(progress);
+//    }
 
     public Observer<List<WorkInfo>> workInfoObserver() {
        return listLiveData -> {
@@ -277,7 +280,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
                 // Last searched location will be used to initiate weather fetch on swipe refresh
                 SharedPreferences.Editor sharedPrefEditor = mPref.edit();
                 sharedPrefEditor.putString(RECENTLY_SEARCHED_LOCATION, query.trim()).apply();
-                displayWeatherInfo(query);
+                fetchWeather(query);
 
                 // TODO: Replace this with a listener
                 // Update details of the nav header when search completes
@@ -329,7 +332,7 @@ public class HomeFragment extends Fragment implements TaskDelegate {
                         Coord.latitude = viewModel.LAGOS_NG_LATITUDE;
                         Coord.longitude = viewModel.LAGOS_NG_LONGITUDE;
                     }
-                    displayWeatherInfo(Coord.latitude, Coord.longitude);
+                    fetchWeather(Coord.latitude, Coord.longitude);
                 });
     }
 
@@ -353,20 +356,20 @@ public class HomeFragment extends Fragment implements TaskDelegate {
         }
     }
 
-    private void displayWeatherInfo(String location) {
+    private void fetchWeather(String location) {
         lastSearchedPlace = location;
         try {
             URL url = WeatherRepository.buildURL(location);
-            mFetchWeatherAsyncTask = new WeatherQueryAsyncTask(this).execute(url);
+            viewModel.fetchWeather(url);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    private void displayWeatherInfo(double lat, double lon) {
+    private void fetchWeather(double lat, double lon) {
         try {
             URL url = WeatherRepository.buildURL(lat, lon);
-            mFetchWeatherAsyncTask = new WeatherQueryAsyncTask(this).execute(url);
+            viewModel.fetchWeather(url);
         } catch (Exception e) {
             e.printStackTrace();
         }

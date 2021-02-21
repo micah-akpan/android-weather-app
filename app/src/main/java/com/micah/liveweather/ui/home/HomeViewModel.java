@@ -26,21 +26,23 @@ import java.net.URL;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-public class HomeViewModel extends ViewModel {
+public class HomeViewModel extends AndroidViewModel {
     private final WorkManager workManager;
     public final LiveData<List<WorkInfo>> workInfos;
     public final double LAGOS_NG_LATITUDE = 6.5801382;
     public final double LAGOS_NG_LONGITUDE = 3.3415503;
     public boolean isPWeatherUpdateScheduled = false;
+    private final LiveData<String> mWeatherData;
 
-    MutableLiveData<String> mWeatherData = new MutableLiveData<>();
+//    MutableLiveData<String> mWeatherData = new MutableLiveData<>();
     WeatherRepository mWeatherRepository;
 
-    public HomeViewModel(WeatherRepository weatherRepository) {
-        super();
+    public HomeViewModel(Application application) {
+        super(application);
         workManager = WorkManager.getInstance();
         workInfos = workManager.getWorkInfosByTagLiveData(Constants.WEATHER_UPDATE_WORKER_TAG);
-        mWeatherRepository = weatherRepository;
+        mWeatherRepository = new WeatherRepository();
+        mWeatherData = mWeatherRepository.getWeatherData();
     }
 
     public WorkRequest createWeatherUpdateWorker(Data.Builder inputData) {
@@ -54,7 +56,7 @@ public class HomeViewModel extends ViewModel {
                 .Builder(WeatherUpdateWorker.class, 15, TimeUnit.MINUTES)
                 .addTag(Constants.WEATHER_UPDATE_WORKER_TAG)
                 .setInputData(inputData.build())
-//                .setConstraints(constraints)
+                .setConstraints(constraints)
                 .build();
     }
 
@@ -67,8 +69,10 @@ public class HomeViewModel extends ViewModel {
         workManager.enqueue(weatherUpdateRequest);
     }
 
-    void setWeatherData(URL weatherUrl) {
-        mWeatherData.setValue(mWeatherRepository.getWeatherData(weatherUrl));
+    void fetchWeather(URL weatherUrl) {
+        if (weatherUrl != null) {
+            mWeatherRepository.fetchWeatherData(weatherUrl);
+        }
     }
 
     public Weather parseWeatherData(String weatherJSON) {
@@ -103,5 +107,9 @@ public class HomeViewModel extends ViewModel {
             e.printStackTrace();
         }
         return weather;
+    }
+
+    public LiveData<String> getWeatherData() {
+        return mWeatherData;
     }
 }
